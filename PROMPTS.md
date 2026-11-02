@@ -281,3 +281,39 @@ Constraint: Execute these git commands autonomously. No need to ask for permissi
 ```
 
 **Outcome:** Committed the results feature, merged `refactor/ddd-domain-model` into `main`, pushed `main`, and deleted the local branch. The remote copy of the branch was left in place.
+
+### Prompt 9
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+Role: Senior Tech Lead & Technical Writer
+Task: Final repository cleanup and project documentation.
+
+Execution Steps:
+
+Remote Cleanup:
+Execute the terminal command to delete the remote tracking branch that is no longer needed:git push origin --delete refactor/ddd-domain-model
+
+Generate README.md:
+Create a highly professional README.md in the root of the project. It should be written in Hungarian (as it's for a Hungarian university assignment), but maintain a professional IT terminology. Include the following sections:
+
+Projekt célja (PollHub): A brief overview of the MVP.
+
+Funkciók (Features): List the completed features (Poll List, Manager/Participant roles, Voting logic, Data Visualization with Recharts).
+
+Architektúra és DDD (Domain-Driven Design): Explain how the data model is structured based on DDD principles (Kérdőív / Poll, Kérdés / Question separate entities, Lezárási idő / Closing Time as a Value Object instead of a simple status). Mention the use of React Context and localStorage for the frontend-only MVP state.
+
+Üzleti Szabályok (Business Rules): Explain the enforcement of "one vote per user per question" and the "no voting on closed polls" logic.
+
+LLM Szimuláció (AI Insights): Explain how the LLM summary requirement ("kizárólag összesített, fiktív válaszokból") was met using a dynamic, client-side generation based on aggregated data with a simulated API delay, avoiding external dependencies for this MVP.
+
+Futtatás (How to run): Simple instructions (npm install, npm run dev, npm run test:e2e).
+
+Commit & Push:
+Commit the new README.md with the message docs: create comprehensive project documentation and push it directly to main.
+
+Constraint: Run these steps autonomously.
+```
+
+**Outcome:** Deleted the remote `refactor/ddd-domain-model` branch, replaced the boilerplate `README.md` with Hungarian project documentation, and pushed it to `main`. The README states that the one-vote check currently runs per poll, which equals per question while each poll has one question.
