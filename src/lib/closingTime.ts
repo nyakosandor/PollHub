@@ -1,4 +1,7 @@
-const DAY_MS = 24 * 60 * 60 * 1000;
+import { pluralize } from "@/lib/format";
+
+const MINUTE_MS = 60 * 1000;
+const DAY_MS = 24 * 60 * MINUTE_MS;
 const DEFAULT_POLL_DURATION_MS = 7 * DAY_MS;
 
 /** Longest delay setTimeout supports; larger values fire immediately. */
@@ -16,6 +19,17 @@ export function defaultClosingTime(now: number) {
 export function nextClosingTime(closingTimes: number[], now: number) {
   const upcoming = closingTimes.filter((closesAt) => !isClosed(closesAt, now));
   return upcoming.length > 0 ? Math.min(...upcoming) : undefined;
+}
+
+/** Describes the time left until closing, e.g. "Closes in 2 days". */
+export function formatTimeRemaining(closesAt: number, now: number) {
+  const minutes = Math.max(Math.ceil((closesAt - now) / MINUTE_MS), 1);
+  if (minutes < 60) return `Closes in ${pluralize(minutes, "minute")}`;
+
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `Closes in ${pluralize(hours, "hour")}`;
+
+  return `Closes in ${pluralize(Math.round(hours / 24), "day")}`;
 }
 
 /** Formats a timestamp as the local-time value of a datetime-local input. */

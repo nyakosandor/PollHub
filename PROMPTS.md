@@ -206,3 +206,78 @@ Push the changes to the remote repository.
 ```
 
 **Outcome:** Committed the refactor and pushed it to a new branch, `refactor/ddd-domain-model`, rather than directly to `main`.
+
+### Prompt 7
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+Role: Data Visualization & Frontend Expert
+Task: Implement the "Complex feature: Result evaluation and visualization" based on the project specification. Upgrade the Results view with advanced charts, KPI metrics, and a dynamic simulated LLM summary.Tech Stack: Next.js, React, Tailwind CSS, Recharts, Framer Motion (optional for simple transitions, or just use Tailwind CSS transitions).
+
+Requirements for the Results View (/polls/[id]/results or similar):
+
+KPI / Metric Cards:
+Above the chart, display a grid of summary cards showing:
+
+Total Votes: The absolute number of votes received.
+
+Leading Option: The name of the option with the most votes currently.
+
+Time Remaining / Status: If closesAt is in the future, show a relative countdown (e.g., "Closes in 2 days"). If in the past, show "Closed".
+
+Advanced Visualization (Recharts):
+
+Replace the basic HTML/Tailwind bars with a polished, interactive chart using the recharts library (e.g., ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Cell).
+
+The chart must be responsive and adapt to mobile and desktop screens.
+
+Show percentages clearly on or near the bars.
+
+Enhanced Simulated LLM Summary:
+
+The spec requires: "LLM-összefoglaló kizárólag összesített, fiktív válaszokból" (LLM summary based exclusively on aggregated, fictitious answers).
+
+Update the AI Insights component: It must accept the aggregated vote data as props.
+
+Dynamic Fictitious Generation: Instead of a static hardcoded string, write a helper function that takes the top option and total votes, and returns a realistic-sounding "AI" analysis (e.g., "Based on the {totalVotes} aggregated responses, the simulated consensus strongly favors '{topOption.text}'. The distribution suggests...").
+
+Loading state: When the component mounts, show a beautiful skeleton loader or pulsing "Generating AI insights..." state for exactly 2 seconds using setTimeout to simulate LLM API latency, then reveal the generated text.
+
+Testing:
+
+Ensure the Playwright E2E tests are updated to account for the new UI elements (loading states, new metric cards).
+
+Run tests to confirm everything is green.
+
+Instructions:
+Refactor the Results component and its children. Make it look like a premium SaaS dashboard using Tailwind. Do not push to git yet, just implement and test.
+```
+
+**Outcome:** Upgraded the results section of `/polls/[id]` (no separate route) with KPI cards for total votes, leading option and time remaining; a ranked Recharts bar chart with percentages, a highlighted leader, a tooltip and a table view; and an AI Insights panel that shows a loading state for 2 seconds on mount, then an analysis built only from aggregated counts. Ties and polls with no votes are handled. Used the `shape` prop rather than `Cell`, which Recharts has deprecated. Removed the Generate and Regenerate buttons. `tsc`, `eslint`, `next build`, and all 20 E2E tests pass. Changes are uncommitted on `refactor/ddd-domain-model`.
+
+### Prompt 8
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+Role: Senior DevOps
+Task: Finalize, commit, merge, and push the completed Results Visualization feature.
+
+Context:
+Excellent work on the Results view! Your architectural decisions (avoiding deprecated Recharts features, handling ties, auto-generation, keeping it on the same route) are spot on. Since all 20 Playwright E2E tests, type-checks, and production builds are passing, it's time to integrate this into the main branch.
+
+Execution Steps:
+
+Commit: Add and commit the current uncommitted changes on the refactor/ddd-domain-model branch. Use a clean conventional commit message (e.g., feat: implement advanced results visualization and dynamic AI insights).
+
+Merge: Switch to the main branch and merge the refactor/ddd-domain-model branch into main.
+
+Push: Push the main branch to the remote repository.
+
+Cleanup (Optional): Delete the local refactor/ddd-domain-model branch if the merge was successful.
+
+Constraint: Execute these git commands autonomously. No need to ask for permission if the git status is clean.
+```
+
+**Outcome:** Committed the results feature, merged `refactor/ddd-domain-model` into `main`, pushed `main`, and deleted the local branch. The remote copy of the branch was left in place.
