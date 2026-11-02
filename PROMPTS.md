@@ -135,3 +135,74 @@ Constraint: Do not stop to ask for my confirmation if the code is clean. Just fi
 - **Naming and markup:** clearer names (`isVoted`, `selectedOptionId`, `results`), dead code removed, stable keys for draft options, and form labels linked to their inputs.
 
 Validated with `tsc`, `eslint`, `next build`, and a 20-check Playwright E2E run (all passed). Gitignored `.playwright-mcp/` and `.claude/settings.local.json`, then committed and pushed to `origin/main`.
+
+## 2026-11-02
+
+### Prompt 5
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+Role: Senior Frontend Architect
+Task: Domain Model Refactoring (DDD) - Update entities and value objects to strictly match the final architectural spec, while keeping the UI flow intact.
+
+Context:
+The Week 1 MVP works perfectly, but the underlying data model is too simplistic (status: open/closed, and Poll directly containing the question string). We need to refactor the data structures in types.ts, lib/storage.ts, and PollContext to prepare for future complex features.
+
+Required Changes:
+
+Implement "Lezárási idő" (Closing Time) Value Object:
+
+Remove the boolean/string status (open/closed) from the Poll entity.
+
+Introduce closesAt: number (Unix timestamp) or Date string.
+
+A poll is dynamically considered "Closed" if Date.now() > closesAt.
+
+Update the Create Poll form to allow setting a closing date/time (or default it to 7 days from now).
+
+Update the "Close Poll" manager action to simply set closesAt to Date.now() (closing it immediately).
+
+Separate "Kérdés" (Question) from "Kérdőív" (Poll):
+
+Refactor the Poll entity: It should now have id, title (string), and closesAt.
+
+Create a Question entity: id, pollId, text, and options: Option[].
+
+Create an Answer/Vote entity: id, pollId, questionId, optionId, userId.
+
+UI Constraint: For now, keep the Create Poll UI simple. When the manager creates a poll, they still only enter a Title, one Question, and its Options. Behind the scenes, the context should create the Poll and the associated single Question.
+
+Update State & UI:
+
+Update PollContext and all lib/* helper files to work with the new separated arrays (polls, questions, votes).
+
+Update the Voting view and Results view to fetch the Question belonging to the Poll and render it accordingly.
+
+Testing & Validation:
+
+Update the existing Playwright E2E tests to accommodate any UI changes (like the new Title field or Closing Time input) and ensure all tests pass.
+
+Do NOT push to git yet. Just refactor and run tests.
+```
+
+**Outcome:** Split the model into `Poll` (`id`, `title`, `closesAt`), `Question`, and `Vote` (now with `questionId`), kept in separate arrays. Removed `status` and the unused `createdAt`. Open/closed is now derived from `closesAt` (`lib/closingTime.ts`), and a clock in `PollContext` updates open views when a poll's closing time passes. The Create Poll form gained Title and Closing time fields (default 7 days from now). The storage key moved to `pollhub_state_v2`, so old `v1` data is no longer loaded. The repo had no Playwright test files, so added `@playwright/test`, `playwright.config.ts`, and `e2e/polls.spec.ts`. `tsc`, `eslint`, `next build`, and all 13 E2E tests pass. Nothing committed or pushed.
+
+### Prompt 6
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+Role: Senior DevOps
+Task: Commit and push the successful Domain-Driven Design (DDD) refactoring.
+
+Instructions:
+
+Since all Playwright E2E tests have passed successfully after the recent Domain Model refactoring, safely add and commit the changes.
+
+Use a descriptive conventional commit message, e.g., refactor: implement DDD entities (Question separation) and Closing Time VO.
+
+Push the changes to the remote repository.
+```
+
+**Outcome:** Committed the refactor and pushed it to a new branch, `refactor/ddd-domain-model`, rather than directly to `main`.

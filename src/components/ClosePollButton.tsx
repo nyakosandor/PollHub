@@ -5,8 +5,8 @@ import { usePolls } from "@/context/PollContext";
 import { Lock } from "lucide-react";
 
 export default function ClosePollButton({ poll }: { poll: Poll }) {
-  const { closePoll } = usePolls();
-  const isClosed = poll.status === "closed";
+  const { closePoll, isPollClosed } = usePolls();
+  const isClosed = isPollClosed(poll);
 
   return (
     <button

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Poll, PollResult } from "@/types";
+import { PollResult, Question } from "@/types";
 import { buildInsightSummary } from "@/lib/insights";
 import { useTimeout } from "@/lib/useTimeout";
 import { Sparkles, Loader2 } from "lucide-react";
@@ -9,14 +9,14 @@ import { Sparkles, Loader2 } from "lucide-react";
 const SIMULATED_LATENCY_MS = 1400;
 
 interface AIInsightsProps {
-  poll: Poll;
+  question: Question;
   results: PollResult[];
   totalVotes: number;
 }
 
 type InsightStatus = "idle" | "loading" | "done";
 
-export default function AIInsights({ poll, results, totalVotes }: AIInsightsProps) {
+export default function AIInsights({ question, results, totalVotes }: AIInsightsProps) {
   const [status, setStatus] = useState<InsightStatus>("idle");
   const [summary, setSummary] = useState("");
   const scheduleTimeout = useTimeout();
@@ -24,7 +24,7 @@ export default function AIInsights({ poll, results, totalVotes }: AIInsightsProp
   const generateSummary = () => {
     setStatus("loading");
     scheduleTimeout(() => {
-      setSummary(buildInsightSummary(poll, results, totalVotes));
+      setSummary(buildInsightSummary(question, results, totalVotes));
       setStatus("done");
     }, SIMULATED_LATENCY_MS);
   };

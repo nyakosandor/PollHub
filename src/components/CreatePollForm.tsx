@@ -2,6 +2,12 @@
 
 import { useState, FormEvent } from "react";
 import { usePolls } from "@/context/PollContext";
+import { NewPoll } from "@/types";
+import {
+  defaultClosingTime,
+  isClosed,
+  toDateTimeInputValue,
+} from "@/lib/closingTime";
 import { createId } from "@/lib/ids";
 import { useTimeout } from "@/lib/useTimeout";
 import { Plus, Trash2, PlusCircle } from "lucide-react";
@@ -20,10 +26,18 @@ const createDraftOption = (): DraftOption => ({ id: createId("draft"), text: "" 
 const createEmptyDraftOptions = () =>
   Array.from({ length: MIN_OPTIONS }, createDraftOption);
 
-function validatePoll(question: string, optionTexts: string[]) {
-  if (!question) return "Please enter a poll question.";
+const createDefaultClosingInput = () =>
+  toDateTimeInputValue(defaultClosingTime(Date.now()));
+
+function validatePoll({ title, questionText, optionTexts, closesAt }: NewPoll) {
+  if (!title) return "Please enter a poll title.";
+  if (!questionText) return "Please enter a poll question.";
   if (optionTexts.length < MIN_OPTIONS) {
     return "Please provide at least two answer options.";
+  }
+  if (Number.isNaN(closesAt)) return "Please choose a closing time.";
+  if (isClosed(closesAt, Date.now())) {
+    return "The closing time must be in the future.";
   }
   return null;
 }
@@ -31,8 +45,10 @@ function validatePoll(question: string, optionTexts: string[]) {
 export default function CreatePollForm() {
   const { createPoll } = usePolls();
   const scheduleTimeout = useTimeout();
+  const [title, setTitle] = useState("");
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<DraftOption[]>(createEmptyDraftOptions);
+  const [closingInput, setClosingInput] = useState(createDefaultClosingInput);
   const [error, setError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -49,22 +65,28 @@ export default function CreatePollForm() {
   };
 
   const resetForm = () => {
+    setTitle("");
     setQuestion("");
     setOptions(createEmptyDraftOptions());
+    setClosingInput(createDefaultClosingInput());
   };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     setShowSuccess(false);
 
-    const trimmedQuestion = question.trim();
-    const optionTexts = options.map((option) => option.text.trim()).filter(Boolean);
+    const newPoll: NewPoll = {
+      title: title.trim(),
+      questionText: question.trim(),
+      optionTexts: options.map((option) => option.text.trim()).filter(Boolean),
+      closesAt: new Date(closingInput).getTime(),
+    };
 
-    const validationError = validatePoll(trimmedQuestion, optionTexts);
+    const validationError = validatePoll(newPoll);
     setError(validationError);
     if (validationError) return;
 
-    createPoll(trimmedQuestion, optionTexts);
+    createPoll(newPoll);
     resetForm();
     setShowSuccess(true);
     scheduleTimeout(() => setShowSuccess(false), SUCCESS_MESSAGE_MS);
@@ -75,6 +97,23 @@ export default function CreatePollForm() {
       onSubmit={handleSubmit}
       className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5"
     >
+      <div>
+        <label
+          htmlFor="poll-title"
+          className="mb-1.5 block text-sm font-medium text-slate-700"
+        >
+          Title
+        </label>
+        <input
+          id="poll-title"
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Team lunch"
+          className={INPUT_CLASS}
+        />
+      </div>
+
       <div>
         <label
           htmlFor="poll-question"
@@ -128,6 +167,22 @@ export default function CreatePollForm() {
           Add option
         </button>
       </fieldset>
+
+      <div>
+        <label
+          htmlFor="poll-closes-at"
+          className="mb-1.5 block text-sm font-medium text-slate-700"
+        >
+          Closing time
+        </label>
+        <input
+          id="poll-closes-at"
+          type="datetime-local"
+          value={closingInput}
+          onChange={(e) => setClosingInput(e.target.value)}
+          className={INPUT_CLASS}
+        />
+      </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {showSuccess && (

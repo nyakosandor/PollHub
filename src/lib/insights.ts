@@ -1,4 +1,4 @@
-import { Poll, PollResult } from "@/types";
+import { PollResult, Question } from "@/types";
 import { pluralize, toPercent } from "@/lib/format";
 
 function describePreferenceStrength(marginPoints: number) {
@@ -7,14 +7,14 @@ function describePreferenceStrength(marginPoints: number) {
   return "a slight but notable lean";
 }
 
-/** Builds a fictitious "AI" summary from the aggregated poll results. */
+/** Builds a fictitious "AI" summary from the aggregated question results. */
 export function buildInsightSummary(
-  poll: Poll,
+  question: Question,
   results: PollResult[],
   totalVotes: number
 ) {
   if (totalVotes === 0) {
-    return `No responses have been collected for "${poll.question}" yet. Once votes start coming in, this summary will highlight the leading option and any notable trends in the fictitious aggregated data.`;
+    return `No responses have been collected for "${question.text}" yet. Once votes start coming in, this summary will highlight the leading option and any notable trends in the fictitious aggregated data.`;
   }
 
   const [leader, runnerUp] = [...results].sort((a, b) => b.count - a.count);
@@ -26,5 +26,5 @@ export function buildInsightSummary(
     ? `"${runnerUp.option.text}" trails as the second most popular choice, suggesting it could serve as a strong alternative if priorities shift. `
     : "";
 
-  return `Based on the aggregated fictitious data from ${pluralize(totalVotes, "response")}, respondents show ${strength} toward "${leader.option.text}," which captured roughly ${leaderShare}% of all votes. ${runnerUpSentence}Overall, the results indicate a fairly decisive signal from participants, making "${leader.option.text}" the standout choice for "${poll.question}".`;
+  return `Based on the aggregated fictitious data from ${pluralize(totalVotes, "response")}, respondents show ${strength} toward "${leader.option.text}," which captured roughly ${leaderShare}% of all votes. ${runnerUpSentence}Overall, the results indicate a fairly decisive signal from participants, making "${leader.option.text}" the standout choice for "${question.text}".`;
 }

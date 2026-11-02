@@ -4,6 +4,7 @@ import { use } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { usePolls } from "@/context/PollContext";
+import { formatClosingTime } from "@/lib/closingTime";
 import { pluralize } from "@/lib/format";
 import Card from "@/components/Card";
 import StatusBadge from "@/components/StatusBadge";
@@ -19,7 +20,15 @@ export default function PollDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { getPoll, getResults, getTotalVotes, role, isHydrated } = usePolls();
+  const {
+    getPoll,
+    getPollQuestion,
+    getResults,
+    getTotalVotes,
+    isPollClosed,
+    role,
+    isHydrated,
+  } = usePolls();
 
   // Polls created in the browser only exist after localStorage hydration,
   // so wait for it before deciding the poll is missing.
@@ -28,13 +37,15 @@ export default function PollDetailPage({
   }
 
   const poll = getPoll(id);
+  const question = getPollQuestion(id);
 
-  if (!poll) {
+  if (!poll || !question) {
     notFound();
   }
 
-  const results = getResults(poll.id);
-  const totalVotes = getTotalVotes(poll.id);
+  const isClosed = isPollClosed(poll);
+  const results = getResults(question.id);
+  const totalVotes = getTotalVotes(question.id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,11 +59,12 @@ export default function PollDetailPage({
 
       <Card>
         <div className="mb-3">
-          <StatusBadge status={poll.status} />
+          <StatusBadge isClosed={isClosed} />
         </div>
-        <h1 className="text-xl font-semibold text-slate-900">
-          {poll.question}
-        </h1>
+        <h1 className="text-xl font-semibold text-slate-900">{poll.title}</h1>
+        <p className="mt-1 text-xs text-slate-500">
+          {isClosed ? "Closed" : "Closes"} {formatClosingTime(poll.closesAt)}
+        </p>
         {role === "Manager" && (
           <div className="mt-4 border-t border-slate-100 pt-4">
             <ClosePollButton poll={poll} />
@@ -62,7 +74,7 @@ export default function PollDetailPage({
 
       {role === "Participant" && (
         <Card title="Cast your vote">
-          <VoteForm poll={poll} />
+          <VoteForm poll={poll} question={question} />
         </Card>
       )}
 
@@ -74,10 +86,15 @@ export default function PollDetailPage({
           </span>
         }
       >
+        <p className="mb-3 text-sm text-slate-700">{question.text}</p>
         <ResultsChart results={results} totalVotes={totalVotes} />
       </Card>
 
-      <AIInsights poll={poll} results={results} totalVotes={totalVotes} />
+      <AIInsights
+        question={question}
+        results={results}
+        totalVotes={totalVotes}
+      />
     </div>
   );
 }

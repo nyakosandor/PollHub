@@ -1,22 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { Poll } from "@/types";
+import { Poll, Question } from "@/types";
 import { usePolls } from "@/context/PollContext";
 import { CheckCircle2, Lock, Send } from "lucide-react";
 
-export default function VoteForm({ poll }: { poll: Poll }) {
-  const { castVote, hasVoted } = usePolls();
+interface VoteFormProps {
+  poll: Poll;
+  question: Question;
+}
+
+export default function VoteForm({ poll, question }: VoteFormProps) {
+  const { castVote, hasVoted, isPollClosed } = usePolls();
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [justVoted, setJustVoted] = useState(false);
 
   const isVoted = hasVoted(poll.id);
-  const isClosed = poll.status === "closed";
+  const isClosed = isPollClosed(poll);
   const canVote = !isVoted && !isClosed;
 
   const handleSubmit = () => {
     if (!selectedOptionId || !canVote) return;
-    castVote(poll.id, selectedOptionId);
+    castVote(question.id, selectedOptionId);
     setJustVoted(true);
   };
 
@@ -41,8 +46,9 @@ export default function VoteForm({ poll }: { poll: Poll }) {
 
   return (
     <div className="flex flex-col gap-3">
+      <p className="text-sm font-medium text-slate-700">{question.text}</p>
       <div className="flex flex-col gap-2">
-        {poll.options.map((option) => (
+        {question.options.map((option) => (
           <label
             key={option.id}
             className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition ${
