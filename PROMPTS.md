@@ -445,3 +445,82 @@ test via playwright mcp and try to fix this issues like black and white theme pr
 ```
 
 **Outcome:** Used the Playwright MCP to scan text contrast on every page and state, under every combination of OS theme and chosen theme. Fixed three light-mode contrast failures (inactive role/language switcher text and the option-number badges, 4.35:1 → slate-600). Added a Light / Dark / System theme switcher in the navbar (EN/HU labels). The choice is saved in `localStorage` and applied by an inline `<head>` script before first paint, as the Next 16 "preventing flash before hydration" guide describes. Tailwind's `dark:` variant now follows `<html data-theme>`, or the system setting when nothing is chosen. Found and fixed the 404 page losing the choice: React re-creates `<html>` there, so the store re-applies it. `next/script` `beforeInteractive` was rejected because it only runs after first paint. Added 4 theme E2E tests: 56/56 pass, and `tsc` and ESLint are clean. Committed and pushed to `main`.
+
+### Prompt 13
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+when i try to switch english language i got this console error:
+
+  57 |         {/* Inline so it runs while the HTML is parsed, before the first paint.
+  58 |             next/script's beforeInteractive only queues it for the Next runtime. */}
+> 59 |         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+     |         ^
+  60 |       </head>
+  61 |       <body className="flex min-h-full flex-col bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+  62 |         <NextIntlClientProvider>
+```
+
+**Outcome:** Cause: switching locale changes the `[locale]` root-layout segment, so React renders `<html>` on the client, and React warns about client-rendered `<script>` tags. Added `src/components/ThemeScript.tsx`: it outputs the inline script only in server HTML and during hydration, and otherwise applies the saved theme in a layout effect before paint. Verified with the Playwright MCP: no console errors across HU → EN → HU, the theme is kept, and it's still set at parse time. Added a regression E2E test. Stress runs showed timing flakiness in the manager navigation tests that already exists on the last commit (2/60 there, 6/60 with the fix). Left uncommitted pending a decision.
+
+### Prompt 14
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+what is the problem here?
+```
+
+**Outcome:** Explained the two separate issues: the locale-switch console error (fixed, uncommitted), and the timing flakiness in the manager E2E tests that already exists. Offered to commit the fix, investigate the flakiness, or both.
+
+### Prompt 15
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+Role: Senior Tech Lead & Developer Advocate
+Task: Generate a comprehensive Presentation Summary Document in Hungarian for a university project defense.
+
+Context:
+The PollHub MVP is completely finished (DDD architecture, Next.js App Router, next-intl i18n, Recharts visualization, simulated AI insights, polished UI/UX, and 100% Playwright E2E coverage). Now, I need a highly professional presentation outline / speaker notes document that summarizes the entire journey, technical decisions, and architecture for a university presentation.
+
+Execution Steps:
+
+Create the Document:
+Create a new file named ELOADAS_VAZLAT.md (Presentation Outline) in the root directory.
+The content MUST be written in professional Hungarian, tailored for an academic/engineering audience.
+
+Structure of the Presentation:
+Include the following sections with bullet points and clear, easy-to-present explanations:
+
+1. Bevezetés és Projekt Célja: Brief overview of PollHub, the core problem it solves, and the MVP scope (1 poll = 1 question).
+
+2. Technológiai Stack: Highlight Next.js (App Router), Tailwind CSS, TypeScript, and why we chose localStorage + React Context for MVP state instead of a heavy backend.
+
+3. Architektúra (Domain-Driven Design): Explain the separation of Kérdőív (Poll) and Kérdés (Question) entities. Highlight the pragmatic "Lightweight Value Object" approach used for the Lezárási idő (Closing Time).
+
+4. Komplex Funkciók (Vizualizáció és AI):
+
+Explain the Recharts integration (handling ties, dynamic bar scaling).
+
+Detail the "Simulated AI Insights" trick: how we dynamically generate fake LLM summaries based on real aggregated data and the active language (i18n), complete with artificial delay, avoiding external API costs.
+
+5. Kétnyelvűség (i18n): Briefly mention the upgrade to next-intl for App Router-compatible localized routing.
+
+6. Minőségbiztosítás (QA & Clean Code): Emphasize the 20 robust Playwright E2E tests, covering business rules (one vote per user, closed poll rejections).
+
+7. Az MVP korlátai és a jövő: A transparent, honest academic conclusion about the current mock authentication (userId) and the next steps for a real backend.
+
+Tone & Formatting:
+
+Use Markdown headers, bold text for emphasis, and bullet points so it is easy to read aloud during a presentation.
+
+Keep the tone confident, engineering-focused, and academic.
+
+Git Operations:
+
+Add, commit (docs: create presentation summary for project defense), and push the file to main autonomously.
+```
+
+**Outcome:** Created `ELOADAS_VAZLAT.md` in Hungarian, with all 7 requested sections, speaker notes, a live-demo script and expected Q&A. Facts were checked against the code: 20 core E2E tests + 4 i18n + 4 theme = 28 scenarios × 2 locales = 56 runs, the 7-day default and 2-second AI delay, consensus thresholds of 30/15 points with a low-sample caveat under 5 votes, `proxy.ts`, and UI strings quoted from `messages/hu.json`. The doc says there's no coverage measurement rather than claiming "100% coverage", and lists the test flakiness among the limitations. Committed and pushed only the outline and this log; the Prompt 13 theme-script fix is still uncommitted.
