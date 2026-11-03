@@ -748,3 +748,16 @@ please push it and make it done
 ```
 
 **Outcome:** Added the Gemini section to the README, then ran the full E2E suite: 84/84 passed (exit code 0), with tsc and ESLint clean. Before committing, `DEMO_FORGATOKONYV.md` had been changed back to its old version on disk, most likely by an editor that still had the old file open. After asking the user, the updated script was restored. Logged Prompts 18–20, committed everything with the message "feat: integrate real Google Gemini API for dynamic AI insights via Server Actions" and pushed to main.
+
+### Prompt 21
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+please add the missing parts to the ELOADAS_VAZLAT.md
+```
+
+**Outcome:** Brought `ELOADAS_VAZLAT.md` (Hungarian presentation outline) up to date with the full-stack app; it still described the localStorage MVP and the simulated AI.
+- **New sections:** the project's evolution (MVP → DDD → i18n → UI → full-stack → Gemini), a request-flow architecture diagram (proxy → server components → DAL → Prisma, plus Server Actions and Gemini), and a chapter on authentication and security (NextAuth, bcrypt, two-level checks, defence against email probing and open redirects).
+- **Updated:** the tech stack, the domain model (`User` and `Option`, the `(userId, questionId)` unique index, a table of where each business rule is enforced), the AI chapter (real Gemini flow, key protection, prompt-injection guard, cache, model fallback, mock mode), and the QA chapter (42 scenarios × 2 languages = 84 runs, separate `e2e.db`, a coverage table).
+- **Limitations, roadmap, demo and Q&A:** rewritten for the current app. Limitations now include self-chosen manager role at sign-up, SQLite, the in-memory AI cache and no unit tests or CI. The demo summary now matches `DEMO_FORGATOKONYV.md`. Added a time budget per section. Not committed.
