@@ -524,3 +524,44 @@ Add, commit (docs: create presentation summary for project defense), and push th
 ```
 
 **Outcome:** Created `ELOADAS_VAZLAT.md` in Hungarian, with all 7 requested sections, speaker notes, a live-demo script and expected Q&A. Facts were checked against the code: 20 core E2E tests + 4 i18n + 4 theme = 28 scenarios × 2 locales = 56 runs, the 7-day default and 2-second AI delay, consensus thresholds of 30/15 points with a low-sample caveat under 5 votes, `proxy.ts`, and UI strings quoted from `messages/hu.json`. The doc says there's no coverage measurement rather than claiming "100% coverage", and lists the test flakiness among the limitations. Committed and pushed only the outline and this log; the Prompt 13 theme-script fix is still uncommitted.
+
+### Prompt 16
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+Role: QA Engineer & Technical Presenter
+Task: Generate a step-by-step Demo Script (Walkthrough) document in Hungarian for the final presentation.
+
+Context:
+We need a detailed, foolproof guide that walks the presenter through a live demo of the PollHub web application, ensuring every feature, business rule, and UI polish is showcased perfectly to the university assessors.
+
+Execution Steps:
+
+Create the Document:
+Create a new file named DEMO_FORGATOKONYV.md in the root directory.
+
+Structure the Walkthrough:
+The document MUST be written in professional Hungarian, structured as a chronological script. Use clear formatting (bolding for buttons to click, italic for what to say/explain). Include the following flow:
+
+0. Előkészületek (Preparation): Starting the dev server and opening the browser.
+
+1. Kezdőképernyő és Kétnyelvűség (UI & i18n): Showing the polished UI and toggling the language (EN/HU) in the Navbar to demonstrate the next-intl integration.
+
+2. Kérdőív Létrehozása (Manager Workflow): Switching to the "Manager" role. Creating a new poll (filling in Title, Question, Options, and demonstrating the Closing Time feature).
+
+3. Szavazás és Üzleti Szabályok (Participant Workflow): Switching to "Participant". Opening the newly created poll. Casting a vote. Crucial: Trying to vote again to demonstrate the strict "one vote per user" business rule and the disabled UI.
+
+4. Vizualizáció és AI Szimuláció (Results & Dashboard): Navigating to the Results view. Showcasing the Recharts bar chart (hovering for tooltips, showing the responsive design). Explaining the KPI cards. Highlight: Pointing out the "AI Insights" component, emphasizing the 2-second simulated loading skeleton, and reading the dynamically generated, localized text.
+
+5. Szavazás Lezárása (Closing Rule): Switching back to Manager, clicking "Close Poll" (or letting the timer run out). Switching to Participant to prove that a closed poll completely disables the voting form.
+
+Tone and Formatting:
+Make it easy to read while presenting. Use check-boxes (- [ ]) for each major action so the presenter can track their progress during practice.
+
+Git Operations:
+
+Add, commit (docs: create step-by-step demo walkthrough script), and push the file to main autonomously.
+```
+
+**Outcome:** Dry-ran the full demo flow with the Playwright MCP on the dev server, then wrote `DEMO_FORGATOKONYV.md` in Hungarian: steps 0–5 plus a closing section, checkboxes, the exact on-screen labels, a script for what to say, a troubleshooting table, and a practice checklist. Adjustments to match the real app: after voting, the form is replaced by the confirmation (there is no disabled form to retry); results are on the poll page, not a separate view; the seeded "Onboarding feedback" poll is used for a richer chart and AI text; the auto-close timer is offered as an option. Found while checking: `/` redirects to the remembered locale, so the script opens `/hu`. After a full reload, the list briefly shows only the seed polls until localStorage loads; this is noted as a presenter tip and is an MVP limitation. Committed and pushed only the script and this log; the Prompt 13 theme-script fix is still uncommitted.
