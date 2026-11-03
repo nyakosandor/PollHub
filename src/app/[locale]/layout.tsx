@@ -7,6 +7,7 @@ import "../globals.css";
 import { routing } from "@/i18n/routing";
 import { PollProvider } from "@/context/PollContext";
 import Navbar from "@/components/Navbar";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,10 +47,17 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
 
   return (
+    // The theme script below may add data-theme before hydration.
     <html
       lang={locale}
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Inline so it runs while the HTML is parsed, before the first paint.
+            next/script's beforeInteractive only queues it for the Next runtime. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <NextIntlClientProvider>
           <PollProvider>

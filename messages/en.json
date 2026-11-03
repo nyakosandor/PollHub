@@ -15,6 +15,12 @@
     "languages": {
       "hu": "Magyar",
       "en": "English"
+    },
+    "theme": "Theme",
+    "themes": {
+      "system": "System theme",
+      "light": "Light theme",
+      "dark": "Dark theme"
     }
   },
   "dashboard": {

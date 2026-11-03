@@ -659,3 +659,81 @@ test.describe("internationalization", () => {
     await expect(page.getByTestId("not-found")).toContainText(t("notFound.title"));
   });
 });
+
+test.describe("theme", () => {
+  const html = (page: Page) => page.locator("html");
+  const bodyIsDark = (page: Page) =>
+    page.evaluate(() => {
+      // Body background lightness: dark theme uses slate-950, light uses slate-50.
+      const probe = document.createElement("canvas").getContext("2d")!;
+      probe.fillStyle = getComputedStyle(document.body).backgroundColor;
+      probe.fillRect(0, 0, 1, 1);
+      const [r, g, b] = probe.getImageData(0, 0, 1, 1).data;
+      return (r + g + b) / 3 < 128;
+    });
+
+  for (const os of ["light", "dark"] as const) {
+    test(`follows a ${os} system theme by default`, async ({ page, t, localePath }) => {
+      await page.emulateMedia({ colorScheme: os });
+      await page.goto(localePath("/"));
+
+      await expect(page.getByTestId("theme-system")).toHaveAttribute("aria-pressed", "true");
+      await expect(page.getByTestId("theme-system")).toHaveAccessibleName(t("nav.themes.system"));
+      await expect(html(page)).not.toHaveAttribute("data-theme");
+      expect(await bodyIsDark(page)).toBe(os === "dark");
+    });
+  }
+
+  test("a chosen theme overrides the system and survives a reload", async ({
+    page,
+    localePath,
+  }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.goto(localePath(`/polls/${CLOSED_POLL.id}`));
+
+    await page.getByTestId("theme-light").click();
+    await expect(html(page)).toHaveAttribute("data-theme", "light");
+    await expect(page.getByTestId("theme-light")).toHaveAttribute("aria-pressed", "true");
+    expect(await bodyIsDark(page)).toBe(false);
+
+    await page.reload();
+    await expect(html(page)).toHaveAttribute("data-theme", "light");
+    expect(await bodyIsDark(page)).toBe(false);
+
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.getByTestId("theme-dark").click();
+    await expect(html(page)).toHaveAttribute("data-theme", "dark");
+    expect(await bodyIsDark(page)).toBe(true);
+
+    // The 404 page keeps the choice too.
+    await page.goto(localePath("/does/not/exist"));
+    await expect(html(page)).toHaveAttribute("data-theme", "dark");
+    expect(await bodyIsDark(page)).toBe(true);
+
+    await page.getByTestId("theme-system").click();
+    await expect(html(page)).not.toHaveAttribute("data-theme");
+    expect(await bodyIsDark(page)).toBe(false);
+  });
+
+  test("a saved theme is applied before the page is painted", async ({
+    page,
+    localePath,
+  }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.addInitScript(() => {
+      window.localStorage.setItem("pollhub_theme", "dark");
+      document.addEventListener("readystatechange", () => {
+        if (document.readyState === "interactive") {
+          (window as unknown as { themeAtParse: string | null }).themeAtParse =
+            document.documentElement.getAttribute("data-theme");
+        }
+      });
+    });
+    await page.goto(localePath("/"));
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { themeAtParse: string | null }).themeAtParse
+      )
+    ).toBe("dark");
+  });
+});

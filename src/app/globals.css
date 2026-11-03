@@ -1,9 +1,24 @@
 @import "tailwindcss";
 
 /*
+ * Theme. <html data-theme="light|dark"> forces a theme the user picked;
+ * without the attribute the page follows the system preference. An inline
+ * script in the root layout sets the attribute before the first paint.
+ */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
+  }
+}
+
+/*
  * Design tokens. `primary` is the brand color for CTAs, links and focus rings;
- * neutrals come from Tailwind's slate scale. Dark mode follows the system
- * preference (Tailwind's default `dark:` variant).
+ * neutrals come from Tailwind's slate scale.
  */
 @theme inline {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
@@ -22,15 +37,24 @@
   --color-primary-950: var(--color-indigo-950);
 }
 
+/* Light theme values; also the system default. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   /* Text colors used inside the results chart's SVG. */
   --chart-label: var(--color-slate-900);
   --chart-value: var(--color-slate-700);
 }
 
+/* Dark theme values, for a forced dark theme and for a dark system theme. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --chart-label: var(--color-slate-100);
+  --chart-value: var(--color-slate-300);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
+    color-scheme: dark;
     --chart-label: var(--color-slate-100);
     --chart-value: var(--color-slate-300);
   }

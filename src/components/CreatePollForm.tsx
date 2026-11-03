@@ -145,7 +145,7 @@ export default function CreatePollForm() {
             <div key={option.id} className="flex items-center gap-2">
               <span
                 aria-hidden="true"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 tabular-nums dark:bg-slate-800 dark:text-slate-400"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600 tabular-nums dark:bg-slate-800 dark:text-slate-400"
               >
                 {index + 1}
               </span>

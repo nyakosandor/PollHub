@@ -15,6 +15,12 @@
     "languages": {
       "hu": "Magyar",
       "en": "English"
+    },
+    "theme": "Téma",
+    "themes": {
+      "system": "Rendszertéma",
+      "light": "Világos téma",
+      "dark": "Sötét téma"
     }
   },
   "dashboard": {

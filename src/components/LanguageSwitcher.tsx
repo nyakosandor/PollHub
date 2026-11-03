@@ -49,7 +49,7 @@ export default function LanguageSwitcher() {
           className={`rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide uppercase transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-95 dark:focus-visible:ring-offset-slate-950 ${
             locale === activeLocale
               ? "bg-white text-primary-700 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-primary-300 dark:ring-slate-700"
-              : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+              : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
           }`}
         >
           {locale}

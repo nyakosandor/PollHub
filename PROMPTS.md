@@ -435,3 +435,13 @@ Constraint: Perform this design overhaul autonomously. Fix any failing E2E tests
 ```
 
 **Outcome:** Added design tokens in `globals.css` (a `primary` color alias for indigo, Geist as the sans font, dark mode that follows the system setting) and shared button, input and card classes in `src/lib/ui.ts`. Restyled every component in light and dark mode: navbar (icon-only role switch on mobile), poll cards, KPI cards, chart, table, AI insights, forms, vote options, the 404 page, and a new poll-list empty state with EN/HU text. No test IDs or test-relied ARIA labels changed, and the chart bar colors stay the same because a test checks them. 48/48 E2E tests pass, and `tsc`, ESLint and `next build` are clean.
+
+### Prompt 12
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+test via playwright mcp and try to fix this issues like black and white theme problem
+```
+
+**Outcome:** Used the Playwright MCP to scan text contrast on every page and state, under every combination of OS theme and chosen theme. Fixed three light-mode contrast failures (inactive role/language switcher text and the option-number badges, 4.35:1 → slate-600). Added a Light / Dark / System theme switcher in the navbar (EN/HU labels). The choice is saved in `localStorage` and applied by an inline `<head>` script before first paint, as the Next 16 "preventing flash before hydration" guide describes. Tailwind's `dark:` variant now follows `<html data-theme>`, or the system setting when nothing is chosen. Found and fixed the 404 page losing the choice: React re-creates `<html>` there, so the store re-applies it. `next/script` `beforeInteractive` was rejected because it only runs after first paint. Added 4 theme E2E tests: 56/56 pass, and `tsc` and ESLint are clean. Committed and pushed to `main`.

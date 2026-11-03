@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { usePolls } from "@/context/PollContext";
 import { UserRole } from "@/types";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
 
 const ROLE_OPTIONS: { role: UserRole; icon: LucideIcon }[] = [
   { role: "Participant", icon: User },
@@ -62,7 +63,7 @@ export default function Navbar() {
                 className={`flex items-center gap-1.5 rounded-full py-1.5 px-2.5 text-sm font-medium transition-all duration-200 active:scale-95 sm:px-3 ${FOCUS_RING} ${
                   role === activeRole
                     ? "bg-white text-primary-700 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-primary-300 dark:ring-slate-700"
-                    : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
                 }`}
               >
                 <Icon aria-hidden="true" className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
@@ -72,6 +73,7 @@ export default function Navbar() {
           </div>
 
           <LanguageSwitcher />
+          <ThemeSwitcher />
         </div>
       </div>
     </header>
