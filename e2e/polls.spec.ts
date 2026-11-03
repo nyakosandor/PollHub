@@ -1,8 +1,10 @@
-import { expect, Page, test } from "@playwright/test";
+import { Page } from "@playwright/test";
+import { expect, test, translatorFor, Translate } from "./fixtures";
 
 const STATE_KEY = "pollhub_state_v2";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// Seed data is user content, so it is not translated.
 const OPEN_POLL = {
   id: "poll-1",
   title: "Next quarter priorities",
@@ -29,12 +31,22 @@ const readState = (page: Page) =>
 const pollLink = (page: Page, title: string) =>
   page.getByRole("link").filter({ hasText: title });
 
-// The badge comes first; the time remaining card can also read "Closed".
-const statusBadge = (page: Page, status: "Open" | "Closed") =>
-  page.getByRole("main").getByText(status, { exact: true }).first();
+// The detail page shows a single status badge inside <main>.
+const statusBadge = (page: Page) =>
+  page.getByRole("main").getByTestId("status-badge").first();
 
-const kpiCard = (page: Page, label: string) =>
-  page.getByRole("group", { name: label });
+async function expectStatus(page: Page, t: Translate, status: "open" | "closed") {
+  const badge = statusBadge(page);
+  await expect(badge).toHaveAttribute("data-status", status);
+  await expect(badge).toHaveText(t(`status.${status}`));
+}
+
+type Kpi = "total-votes" | "leading-option" | "time-remaining";
+const kpiCard = (page: Page, kpi: Kpi) => page.getByTestId(`kpi-${kpi}`);
+
+const insightsSummary = (page: Page) => page.getByTestId("ai-insights-summary");
+
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Stores a change to the saved state and reloads the page to pick it up. */
 async function updateStoredState(
@@ -60,31 +72,60 @@ const closeOpenPollIn = (page: Page, delayMs: number) =>
     state.polls[0].closesAt = Date.now() + delayMs;
   });
 
-async function openManagerDashboard(page: Page) {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Manager" }).click();
-  await page.getByRole("link", { name: "Manager Dashboard" }).click();
+async function openManagerDashboard(
+  page: Page,
+  t: Translate,
+  localePath: (path: string) => string
+) {
+  await page.goto(localePath("/"));
+  await page.getByTestId("role-Manager").click();
+  await page.getByTestId("nav-manager-dashboard").click();
+  await expect(page).toHaveURL(localePath("/manager"));
   await expect(
-    page.getByRole("heading", { name: "Manager Dashboard" })
+    page.getByRole("heading", { name: t("manager.title") })
   ).toBeVisible();
 }
 
+const formField = (page: Page, t: Translate, field: "title" | "question" | "closingTime") =>
+  page.getByLabel(t(`form.${field}`), { exact: true });
+
+const optionInput = (page: Page, t: Translate, number: number) =>
+  page.getByPlaceholder(t("form.optionPlaceholder", { number }));
+
 async function fillPollForm(
   page: Page,
+  t: Translate,
   { title, question }: { title: string; question: string }
 ) {
-  await page.getByLabel("Title").fill(title);
-  await page.getByLabel("Question").fill(question);
-  await page.getByPlaceholder("Option 1").fill("Yes");
-  await page.getByPlaceholder("Option 2").fill("No");
+  await formField(page, t, "title").fill(title);
+  await formField(page, t, "question").fill(question);
+  await optionInput(page, t, 1).fill("Yes");
+  await optionInput(page, t, 2).fill("No");
 }
 
 const submitPollForm = (page: Page) =>
-  page.getByRole("button", { name: "Create Poll" }).click();
+  page.getByTestId("create-poll-submit").click();
+
+async function expectFormError(
+  page: Page,
+  t: Translate,
+  error:
+    | "titleRequired"
+    | "questionRequired"
+    | "optionsRequired"
+    | "closingTimeRequired"
+    | "closingTimeInPast"
+) {
+  const message = page.getByTestId("form-error");
+  await expect(message).toHaveAttribute("data-error", error);
+  await expect(message).toHaveText(t(`form.errors.${error}`));
+}
 
 test.describe("dashboard", () => {
   test("lists polls by title with a status derived from closesAt", async ({
     page,
+    t,
+    localePath,
   }) => {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
@@ -92,21 +133,22 @@ test.describe("dashboard", () => {
       if (message.type() === "error") errors.push(message.text());
     });
 
-    await page.goto("/");
+    await page.goto(localePath("/"));
+    await expect(page.getByRole("heading", { name: t("dashboard.title") })).toBeVisible();
 
     const openPoll = pollLink(page, OPEN_POLL.title);
-    await expect(openPoll.getByText("Open", { exact: true })).toBeVisible();
-    await expect(openPoll).toContainText("0 votes · 4 options");
+    await expect(openPoll.getByTestId("status-badge")).toHaveText(t("status.open"));
+    await expect(openPoll).toContainText(t("pollList.stats", { votes: 0, options: 4 }));
 
     const closedPoll = pollLink(page, CLOSED_POLL.title);
-    await expect(closedPoll.getByText("Closed", { exact: true })).toBeVisible();
-    await expect(closedPoll).toContainText("4 votes · 4 options");
+    await expect(closedPoll.getByTestId("status-badge")).toHaveText(t("status.closed"));
+    await expect(closedPoll).toContainText(t("pollList.stats", { votes: 4, options: 4 }));
 
     // Polls render on the server too, so this also catches hydration mismatches.
     expect(errors).toEqual([]);
   });
 
-  test("ignores state saved in the old v1 format", async ({ page }) => {
+  test("ignores state saved in the old v1 format", async ({ page, localePath }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem(
         "pollhub_state_v1",
@@ -116,7 +158,7 @@ test.describe("dashboard", () => {
         })
       );
     });
-    await page.goto("/");
+    await page.goto(localePath("/"));
 
     await expect(pollLink(page, OPEN_POLL.title)).toBeVisible();
     await expect(page.getByText("Old?")).toHaveCount(0);
@@ -124,28 +166,41 @@ test.describe("dashboard", () => {
 });
 
 test.describe("participant", () => {
-  test("votes once and the vote survives a reload", async ({ page }) => {
-    await page.goto(`/polls/${OPEN_POLL.id}`);
+  test("votes once and the vote survives a reload", async ({
+    page,
+    t,
+    localePath,
+  }) => {
+    await page.goto(localePath(`/polls/${OPEN_POLL.id}`));
 
     await expect(
       page.getByRole("heading", { name: OPEN_POLL.title })
     ).toBeVisible();
     await expect(page.getByText(OPEN_POLL.question)).toHaveCount(2);
 
-    const submit = page.getByRole("button", { name: "Submit Vote" });
+    const submit = page.getByTestId("submit-vote");
+    await expect(submit).toHaveText(t("vote.submit"));
     await expect(submit).toBeDisabled();
     await page.getByRole("radio", { name: "Mobile app" }).check();
     await submit.click();
 
-    await expect(page.getByText("Thanks for voting!")).toBeVisible();
-    await expect(kpiCard(page, "Total votes")).toContainText("1");
-    await expect(kpiCard(page, "Leading option")).toContainText("Mobile app");
+    const confirmation = page.getByTestId("vote-confirmation");
+    await expect(confirmation).toContainText(t("vote.thanks"));
+    await expect(kpiCard(page, "total-votes")).toContainText("1");
+    await expect(kpiCard(page, "leading-option")).toContainText("Mobile app");
 
     // A new vote runs the simulated analysis again, on the new totals.
-    await expect(page.getByText("Generating AI insights...")).toBeVisible();
-    await expect(
-      page.getByText("Based on the 1 aggregated response")
-    ).toBeVisible();
+    await expect(page.getByTestId("ai-insights-loading")).toHaveText(
+      t("insights.loading")
+    );
+    await expect(insightsSummary(page)).toContainText(
+      t("insights.lead", {
+        count: 1,
+        strength: "strong",
+        leader: t("insights.quoted", { text: "Mobile app" }),
+        share: 100,
+      })
+    );
 
     const { votes } = await readState(page);
     expect(votes.at(-1)).toMatchObject({
@@ -156,42 +211,53 @@ test.describe("participant", () => {
     });
 
     await page.reload();
-    await expect(page.getByText("Already voted")).toBeVisible();
+    await expect(confirmation).toHaveText(t("vote.alreadyVoted"));
     await expect(page.getByRole("radio")).toHaveCount(0);
-    await expect(kpiCard(page, "Total votes")).toContainText("1");
+    await expect(kpiCard(page, "total-votes")).toContainText("1");
   });
 
-  test("cannot vote on a closed poll but sees its results", async ({ page }) => {
-    await page.goto(`/polls/${CLOSED_POLL.id}`);
+  test("cannot vote on a closed poll but sees its results", async ({
+    page,
+    t,
+    localePath,
+  }) => {
+    await page.goto(localePath(`/polls/${CLOSED_POLL.id}`));
 
-    await expect(statusBadge(page, "Closed")).toBeVisible();
-    await expect(page.getByText("This poll is closed.")).toBeVisible();
+    await expectStatus(page, t, "closed");
+    await expect(page.getByTestId("vote-closed")).toHaveText(t("vote.closed"));
     await expect(page.getByRole("radio")).toHaveCount(0);
     await expect(page.getByText(CLOSED_POLL.question)).toBeVisible();
-    await expect(kpiCard(page, "Total votes")).toContainText("4");
+    await expect(kpiCard(page, "total-votes")).toContainText("4");
   });
 
-  test("is redirected away from the manager dashboard", async ({ page }) => {
-    await page.goto("/manager");
-    await expect(page).toHaveURL("/");
+  test("is redirected away from the manager dashboard", async ({
+    page,
+    localePath,
+  }) => {
+    await page.goto(localePath("/manager"));
+    await expect(page).toHaveURL(localePath("/"));
   });
 
-  test("gets a 404 for an unknown poll", async ({ page }) => {
-    await page.goto("/polls/does-not-exist");
-    await expect(page.getByText("This page could not be found")).toBeVisible();
+  test("gets a 404 for an unknown poll", async ({ page, t, localePath }) => {
+    await page.goto(localePath("/polls/does-not-exist"));
+    const notFound = page.getByTestId("not-found");
+    await expect(notFound).toBeVisible();
+    await expect(notFound).toContainText(t("notFound.title"));
   });
 });
 
 test.describe("manager", () => {
   test("creates a poll and its question as separate entities", async ({
     page,
+    t,
+    localePath,
   }) => {
-    await openManagerDashboard(page);
-    await fillPollForm(page, { title: "Team lunch", question: "Pizza today?" });
+    await openManagerDashboard(page, t, localePath);
+    await fillPollForm(page, t, { title: "Team lunch", question: "Pizza today?" });
     await submitPollForm(page);
 
-    await expect(page.getByText("Poll created successfully!")).toBeVisible();
-    await expect(page.getByLabel("Title")).toHaveValue("");
+    await expect(page.getByTestId("form-success")).toHaveText(t("form.success"));
+    await expect(formField(page, t, "title")).toHaveValue("");
 
     const { polls, questions } = await readState(page);
     const poll = polls[0];
@@ -204,6 +270,7 @@ test.describe("manager", () => {
     });
 
     await pollLink(page, "Team lunch").click();
+    await expect(page).toHaveURL(localePath(`/polls/${poll.id}`));
     await expect(
       page.getByRole("heading", { name: "Team lunch" })
     ).toBeVisible();
@@ -216,13 +283,17 @@ test.describe("manager", () => {
     ).toBeVisible();
   });
 
-  test("closing time defaults to seven days from now", async ({ page }) => {
-    await openManagerDashboard(page);
-    await fillPollForm(page, { title: "Default", question: "Default close?" });
+  test("closing time defaults to seven days from now", async ({
+    page,
+    t,
+    localePath,
+  }) => {
+    await openManagerDashboard(page, t, localePath);
+    await fillPollForm(page, t, { title: "Default", question: "Default close?" });
 
     const before = Date.now();
     await submitPollForm(page);
-    await expect(page.getByText("Poll created successfully!")).toBeVisible();
+    await expect(page.getByTestId("form-success")).toBeVisible();
 
     const closesAt = (await readState(page)).polls[0].closesAt as number;
     // The input has minute precision, so the value can be up to a minute early.
@@ -230,17 +301,17 @@ test.describe("manager", () => {
     expect(closesAt).toBeLessThanOrEqual(Date.now() + 7 * DAY_MS);
 
     await pollLink(page, "Default").click();
-    await expect(kpiCard(page, "Time remaining")).toContainText(
-      "Closes in 7 days"
+    await expect(kpiCard(page, "time-remaining")).toContainText(
+      t("kpi.closesIn", { unit: "day", count: 7 })
     );
   });
 
-  test("can set a custom closing time", async ({ page }) => {
-    await openManagerDashboard(page);
-    await fillPollForm(page, { title: "Custom", question: "Custom close?" });
-    await page.getByLabel("Closing time").fill("2031-03-15T14:30");
+  test("can set a custom closing time", async ({ page, t, localePath }) => {
+    await openManagerDashboard(page, t, localePath);
+    await fillPollForm(page, t, { title: "Custom", question: "Custom close?" });
+    await formField(page, t, "closingTime").fill("2031-03-15T14:30");
     await submitPollForm(page);
-    await expect(page.getByText("Poll created successfully!")).toBeVisible();
+    await expect(page.getByTestId("form-success")).toBeVisible();
 
     const closesAt = (await readState(page)).polls[0].closesAt as number;
     const expected = await page.evaluate(() =>
@@ -249,50 +320,51 @@ test.describe("manager", () => {
     expect(closesAt).toBe(expected);
   });
 
-  test("validates the form", async ({ page }) => {
-    await openManagerDashboard(page);
+  test("validates the form", async ({ page, t, localePath }) => {
+    await openManagerDashboard(page, t, localePath);
     const pollCount = (await readState(page)).polls.length;
 
     await submitPollForm(page);
-    await expect(page.getByText("Please enter a poll title.")).toBeVisible();
+    await expectFormError(page, t, "titleRequired");
 
-    await page.getByLabel("Title").fill("Validation");
+    await formField(page, t, "title").fill("Validation");
     await submitPollForm(page);
-    await expect(page.getByText("Please enter a poll question.")).toBeVisible();
+    await expectFormError(page, t, "questionRequired");
 
-    await page.getByLabel("Question").fill("Valid?");
+    await formField(page, t, "question").fill("Valid?");
     await submitPollForm(page);
-    await expect(
-      page.getByText("Please provide at least two answer options.")
-    ).toBeVisible();
+    await expectFormError(page, t, "optionsRequired");
 
-    await page.getByPlaceholder("Option 1").fill("Yes");
-    await page.getByPlaceholder("Option 2").fill("No");
-    await page.getByLabel("Closing time").fill("2020-01-01T00:00");
+    await optionInput(page, t, 1).fill("Yes");
+    await optionInput(page, t, 2).fill("No");
+    await formField(page, t, "closingTime").fill("2020-01-01T00:00");
     await submitPollForm(page);
-    await expect(
-      page.getByText("The closing time must be in the future.")
-    ).toBeVisible();
+    await expectFormError(page, t, "closingTimeInPast");
 
-    await page.getByLabel("Closing time").fill("");
+    await formField(page, t, "closingTime").fill("");
     await submitPollForm(page);
-    await expect(page.getByText("Please choose a closing time.")).toBeVisible();
+    await expectFormError(page, t, "closingTimeRequired");
 
     expect((await readState(page)).polls).toHaveLength(pollCount);
   });
 
   test("closing a poll sets closesAt to now and blocks voting", async ({
     page,
+    t,
+    localePath,
   }) => {
-    await openManagerDashboard(page);
+    await openManagerDashboard(page, t, localePath);
     await pollLink(page, OPEN_POLL.title).click();
-    await expect(statusBadge(page, "Open")).toBeVisible();
+    await expectStatus(page, t, "open");
 
     const before = Date.now();
-    await page.getByRole("button", { name: "Close poll" }).click();
+    const closeButton = page.getByTestId("close-poll");
+    await expect(closeButton).toHaveText(t("poll.closePoll"));
+    await closeButton.click();
 
-    await expect(page.getByRole("button", { name: "Poll closed" })).toBeDisabled();
-    await expect(statusBadge(page, "Closed")).toBeVisible();
+    await expect(closeButton).toHaveText(t("poll.pollClosed"));
+    await expect(closeButton).toBeDisabled();
+    await expectStatus(page, t, "closed");
 
     const { polls } = await readState(page);
     const poll = polls.find(({ id }) => id === OPEN_POLL.id);
@@ -300,58 +372,72 @@ test.describe("manager", () => {
     expect(poll?.closesAt).toBeGreaterThanOrEqual(before);
     expect(poll?.closesAt).toBeLessThanOrEqual(Date.now());
 
-    await page.getByRole("button", { name: "Participant" }).click();
-    await expect(page.getByText("This poll is closed.")).toBeVisible();
+    await page.getByTestId("role-Participant").click();
+    await expect(page.getByTestId("vote-closed")).toBeVisible();
 
     await page.reload();
-    await expect(statusBadge(page, "Closed")).toBeVisible();
+    await expectStatus(page, t, "closed");
     await expect(page.getByRole("radio")).toHaveCount(0);
   });
 });
 
 test.describe("results view", () => {
-  test("KPI cards summarize a closed poll", async ({ page }) => {
-    await page.goto(`/polls/${CLOSED_POLL.id}`);
+  test("KPI cards summarize a closed poll", async ({ page, t, localePath }) => {
+    await page.goto(localePath(`/polls/${CLOSED_POLL.id}`));
 
-    const totalVotes = kpiCard(page, "Total votes");
+    const totalVotes = kpiCard(page, "total-votes");
+    await expect(totalVotes).toContainText(t("kpi.totalVotes"));
     await expect(totalVotes).toContainText("4");
-    await expect(totalVotes).toContainText("Across 4 options");
+    await expect(totalVotes).toContainText(t("kpi.acrossOptions", { count: 4 }));
 
-    const leading = kpiCard(page, "Leading option");
+    const leading = kpiCard(page, "leading-option");
     await expect(leading).toContainText("Very satisfied");
-    await expect(leading).toContainText("50% of votes");
+    await expect(leading).toContainText(t("kpi.shareOfVotes", { share: 50 }));
 
-    await expect(kpiCard(page, "Time remaining")).toContainText("Closed");
+    await expect(kpiCard(page, "time-remaining")).toContainText(t("kpi.closed"));
   });
 
-  test("KPI cards handle a poll without votes", async ({ page }) => {
-    await page.goto(`/polls/${OPEN_POLL.id}`);
+  test("KPI cards handle a poll without votes", async ({ page, t, localePath }) => {
+    await page.goto(localePath(`/polls/${OPEN_POLL.id}`));
 
-    await expect(kpiCard(page, "Total votes")).toContainText("0");
-    await expect(kpiCard(page, "Leading option")).toContainText("No votes yet");
-    await expect(kpiCard(page, "Time remaining")).toContainText(
-      /Closes in \d+ days/
+    await expect(kpiCard(page, "total-votes")).toContainText("0");
+    await expect(kpiCard(page, "leading-option")).toContainText(t("kpi.noVotesYet"));
+    // Counts are formatted per locale, with digit grouping such as "1,155".
+    const manyDays = t("kpi.closesIn", { unit: "day", count: 999 });
+    await expect(kpiCard(page, "time-remaining")).toContainText(
+      new RegExp(escapeRegExp(manyDays).replace("999", "\\d[\\d\\s,.]*"))
     );
-    await expect(page.getByText("No votes have been cast yet.")).toBeVisible();
+    await expect(page.getByText(t("results.noVotes"))).toBeVisible();
     await expect(page.locator(".recharts-surface")).toHaveCount(0);
-    await expect(page.getByText("No responses have been aggregated")).toBeVisible();
+    await expect(insightsSummary(page)).toHaveText(t("insights.empty"));
   });
 
   test("time remaining counts down in the largest fitting unit", async ({
     page,
+    t,
+    localePath,
   }) => {
-    await page.goto(`/polls/${OPEN_POLL.id}`);
-    const timeRemaining = kpiCard(page, "Time remaining");
+    await page.goto(localePath(`/polls/${OPEN_POLL.id}`));
+    const timeRemaining = kpiCard(page, "time-remaining");
 
     await closeOpenPollIn(page, 3 * 60 * 60 * 1000);
-    await expect(timeRemaining).toContainText("Closes in 3 hours");
+    await expect(timeRemaining).toContainText(
+      t("kpi.closesIn", { unit: "hour", count: 3 })
+    );
 
     await closeOpenPollIn(page, 10 * 60 * 1000);
-    await expect(timeRemaining).toContainText("Closes in 10 minutes");
+    await expect(timeRemaining).toContainText(
+      t("kpi.closesIn", { unit: "minute", count: 10 })
+    );
   });
 
-  test("a tie names every leading option", async ({ page }) => {
-    await page.goto(`/polls/${OPEN_POLL.id}`);
+  test("a tie names every leading option", async ({
+    page,
+    t,
+    localePath,
+    formatList,
+  }) => {
+    await page.goto(localePath(`/polls/${OPEN_POLL.id}`));
     await updateStoredState(page, (state) => {
       state.votes.push(
         ...[1, 2].map((optionNumber) => ({
@@ -364,18 +450,26 @@ test.describe("results view", () => {
       );
     });
 
-    const leading = kpiCard(page, "Leading option");
-    await expect(leading).toContainText("Dark mode and Mobile app");
-    await expect(leading).toContainText("Tied at 50% each");
-    await expect(
-      page.getByText('split evenly between "Dark mode" and "Mobile app"')
-    ).toBeVisible();
+    const leading = kpiCard(page, "leading-option");
+    await expect(leading).toContainText(formatList(["Dark mode", "Mobile app"]));
+    await expect(leading).toContainText(t("kpi.tied", { share: 50 }));
+
+    const quote = (text: string) => t("insights.quoted", { text });
+    await expect(insightsSummary(page)).toHaveText(
+      `${t("insights.tie", {
+        count: 2,
+        leaders: formatList([quote("Dark mode"), quote("Mobile app")]),
+        share: 50,
+      })} ${t("insights.lowSample")}`
+    );
   });
 
   test("chart ranks options, shows percentages and highlights the leader", async ({
     page,
+    t,
+    localePath,
   }) => {
-    await page.goto(`/polls/${CLOSED_POLL.id}`);
+    await page.goto(localePath(`/polls/${CLOSED_POLL.id}`));
 
     const chart = page.locator(".recharts-wrapper");
     for (const text of ["Very satisfied", "Satisfied", "Neutral", "Unsatisfied"]) {
@@ -396,55 +490,76 @@ test.describe("results view", () => {
 
     await chart.getByText("Very satisfied", { exact: true }).hover();
     await expect(page.locator(".recharts-tooltip-wrapper")).toContainText(
-      "2 votes"
+      t("results.votes", { count: 2 })
     );
   });
 
-  test("results are also available as a table", async ({ page }) => {
-    await page.goto(`/polls/${CLOSED_POLL.id}`);
+  test("results are also available as a table", async ({ page, t, localePath }) => {
+    await page.goto(localePath(`/polls/${CLOSED_POLL.id}`));
     await expect(page.getByRole("table")).toBeHidden();
 
-    await page.getByText("View as table").click();
+    const toggle = page.getByTestId("results-table-toggle");
+    await expect(toggle).toHaveText(t("results.viewTable"));
+    await toggle.click();
 
     const rows = page.getByRole("table").getByRole("row");
     await expect(rows).toHaveCount(5);
+    await expect(rows.nth(0)).toHaveText(
+      new RegExp(`${t("results.table.option")}\\s*${t("results.table.votes")}`)
+    );
     await expect(rows.nth(1)).toHaveText(/Very satisfied\s*2\s*50%/);
     await expect(rows.nth(4)).toHaveText(/Unsatisfied\s*0\s*0%/);
   });
 
   test("AI insights load for exactly two seconds, then show the analysis", async ({
     page,
+    t,
+    localePath,
   }) => {
     await page.clock.install();
     await page.clock.pauseAt(Date.now() + 1000);
-    await page.goto(`/polls/${CLOSED_POLL.id}`);
+    await page.goto(localePath(`/polls/${CLOSED_POLL.id}`));
 
-    const loading = page.getByText("Generating AI insights...");
-    await expect(loading).toBeVisible();
+    const loading = page.getByTestId("ai-insights-loading");
+    await expect(loading).toHaveText(t("insights.loading"));
 
     await page.clock.runFor(1999);
     await expect(loading).toBeVisible();
 
     await page.clock.runFor(1);
     await expect(loading).toBeHidden();
-    await expect(
-      page.getByText(
-        'Based on the 4 aggregated responses, the simulated consensus clearly favors "Very satisfied" with 50% of the vote.'
-      )
-    ).toBeVisible();
+    await expect(insightsSummary(page)).toHaveText(
+      [
+        t("insights.lead", {
+          count: 4,
+          strength: "clear",
+          leader: t("insights.quoted", { text: "Very satisfied" }),
+          share: 50,
+        }),
+        t("insights.runnerUp", {
+          runnerUp: t("insights.quoted", { text: "Satisfied" }),
+          share: 25,
+          margin: 25,
+        }),
+        t("insights.lowSample"),
+      ].join(" ")
+    );
   });
 
-  test("fits a mobile screen without sideways scrolling", async ({ page }) => {
+  test("fits a mobile screen without sideways scrolling", async ({
+    page,
+    localePath,
+  }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`/polls/${CLOSED_POLL.id}`);
+    await page.goto(localePath(`/polls/${CLOSED_POLL.id}`));
 
     const chart = page.locator(".recharts-surface").first();
     await expect(chart).toBeVisible();
     const chartBox = await chart.boundingBox();
     expect(chartBox!.x + chartBox!.width).toBeLessThanOrEqual(375);
 
-    const totalBox = await kpiCard(page, "Total votes").boundingBox();
-    const leadingBox = await kpiCard(page, "Leading option").boundingBox();
+    const totalBox = await kpiCard(page, "total-votes").boundingBox();
+    const leadingBox = await kpiCard(page, "leading-option").boundingBox();
     expect(leadingBox!.y).toBeGreaterThan(totalBox!.y);
 
     const hasSidewaysScroll = await page.evaluate(
@@ -467,17 +582,80 @@ test.describe("results view", () => {
 
 test("an open poll closes by itself when its closing time passes", async ({
   page,
+  t,
+  localePath,
 }) => {
-  await page.goto(`/polls/${OPEN_POLL.id}`);
-  await expect(statusBadge(page, "Open")).toBeVisible();
+  await page.goto(localePath(`/polls/${OPEN_POLL.id}`));
+  await expectStatus(page, t, "open");
 
   await closeOpenPollIn(page, 10_000);
 
-  await expect(statusBadge(page, "Open")).toBeVisible();
+  await expectStatus(page, t, "open");
   await expect(page.getByRole("radio", { name: "Dark mode" })).toBeVisible();
 
   // No interaction or reload from here on: the view has to update on its own.
-  await expect(statusBadge(page, "Closed")).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText("This poll is closed.")).toBeVisible();
+  await expect(statusBadge(page)).toHaveAttribute("data-status", "closed", {
+    timeout: 15_000,
+  });
+  await expect(page.getByTestId("vote-closed")).toHaveText(t("vote.closed"));
   await expect(page.getByRole("radio")).toHaveCount(0);
+});
+
+test.describe("internationalization", () => {
+  test("redirects the root URL to the browser's language", async ({
+    page,
+    localePath,
+    appLocale,
+  }) => {
+    await page.goto("/");
+    await expect(page).toHaveURL(localePath("/"));
+    await expect(page.locator("html")).toHaveAttribute("lang", appLocale);
+  });
+
+  test.describe("with an unsupported browser language", () => {
+    test.use({ locale: "de-DE" });
+
+    test("falls back to Hungarian", async ({ page }) => {
+      await page.goto("/");
+      await expect(page).toHaveURL("/hu");
+      await expect(
+        page.getByRole("heading", { name: translatorFor("hu")("dashboard.title") })
+      ).toBeVisible();
+    });
+  });
+
+  test("the language switcher keeps the page and remembers the choice", async ({
+    page,
+    appLocale,
+    localePath,
+  }) => {
+    const other = appLocale === "hu" ? "en" : "hu";
+    const tOther = translatorFor(other);
+
+    await page.goto(localePath(`/polls/${CLOSED_POLL.id}`));
+    const switcher = page.getByTestId("language-switcher");
+    await expect(switcher.getByTestId(`locale-switch-${appLocale}`)).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+
+    await switcher.getByTestId(`locale-switch-${other}`).click();
+
+    await expect(page).toHaveURL(`/${other}/polls/${CLOSED_POLL.id}`);
+    await expect(page.locator("html")).toHaveAttribute("lang", other);
+    await expect(page.getByTestId("vote-closed")).toHaveText(tOther("vote.closed"));
+    await expect(switcher.getByTestId(`locale-switch-${other}`)).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+
+    // The choice wins over the browser language on the next visit.
+    await page.goto("/");
+    await expect(page).toHaveURL(`/${other}`);
+  });
+
+  test("unknown paths show the localized 404 page", async ({ page, t, localePath }) => {
+    await page.goto(localePath("/does/not/exist"));
+    await expect(page.getByTestId("not-found")).toContainText(t("notFound.title"));
+  });
 });

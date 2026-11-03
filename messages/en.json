@@ -1,0 +1,114 @@
+{
+  "metadata": {
+    "title": "PollHub",
+    "description": "Collect and evaluate questionnaires and polls."
+  },
+  "nav": {
+    "home": "PollHub home",
+    "managerDashboard": "Manager Dashboard",
+    "roleSwitcher": "Active role",
+    "roles": {
+      "Participant": "Participant",
+      "Manager": "Manager"
+    },
+    "language": "Language",
+    "languages": {
+      "hu": "Magyar",
+      "en": "English"
+    }
+  },
+  "dashboard": {
+    "title": "Polls",
+    "subtitle": "Browse all polls and cast your vote, or switch to Manager mode to create and manage polls."
+  },
+  "status": {
+    "open": "Open",
+    "closed": "Closed"
+  },
+  "pollList": {
+    "empty": "No polls yet.",
+    "voted": "Voted",
+    "stats": "{votes, plural, one {# vote} other {# votes}} · {options, plural, one {# option} other {# options}}"
+  },
+  "manager": {
+    "title": "Manager Dashboard",
+    "subtitle": "Create new polls and manage the status of existing ones.",
+    "createHeading": "Create a new poll",
+    "allPolls": "All polls"
+  },
+  "form": {
+    "title": "Title",
+    "titlePlaceholder": "e.g. Team lunch",
+    "question": "Question",
+    "questionPlaceholder": "e.g. What should our next team lunch spot be?",
+    "options": "Answer options",
+    "optionPlaceholder": "Option {number}",
+    "removeOption": "Remove option {number}",
+    "addOption": "Add option",
+    "closingTime": "Closing time",
+    "submit": "Create Poll",
+    "success": "Poll created successfully!",
+    "errors": {
+      "titleRequired": "Please enter a poll title.",
+      "questionRequired": "Please enter a poll question.",
+      "optionsRequired": "Please provide at least two answer options.",
+      "closingTimeRequired": "Please choose a closing time.",
+      "closingTimeInPast": "The closing time must be in the future."
+    }
+  },
+  "poll": {
+    "back": "Back to polls",
+    "closingTime": "{isClosed, select, true {Closed} other {Closes}} {date}",
+    "castVote": "Cast your vote",
+    "closePoll": "Close poll",
+    "pollClosed": "Poll closed"
+  },
+  "vote": {
+    "closed": "This poll is closed. Voting is no longer available.",
+    "thanks": "Thanks for voting!",
+    "alreadyVoted": "Already voted — you can view the results below.",
+    "submit": "Submit Vote"
+  },
+  "results": {
+    "title": "Results",
+    "noVotes": "No votes have been cast yet.",
+    "votes": "{count, plural, one {# vote} other {# votes}}",
+    "viewTable": "View as table",
+    "table": {
+      "option": "Option",
+      "votes": "Votes",
+      "share": "Share"
+    }
+  },
+  "kpi": {
+    "totalVotes": "Total votes",
+    "acrossOptions": "Across {count, plural, one {# option} other {# options}}",
+    "leadingOption": "Leading option",
+    "noVotesYet": "No votes yet",
+    "waitingForFirstVote": "Waiting for the first vote",
+    "tied": "Tied at {share}% each",
+    "shareOfVotes": "{share}% of votes",
+    "timeRemaining": "Time remaining",
+    "closed": "Closed",
+    "votingEnded": "Voting has ended",
+    "votingOpen": "Voting is open",
+    "closesIn": "Closes in {unit, select, minute {{count, plural, one {# minute} other {# minutes}}} hour {{count, plural, one {# hour} other {# hours}}} other {{count, plural, one {# day} other {# days}}}}"
+  },
+  "insights": {
+    "title": "AI Insights",
+    "subtitle": "Simulated summary of aggregated, fictitious responses",
+    "loading": "Generating AI insights...",
+    "empty": "No responses have been aggregated yet, so there is nothing for the simulated analysis to summarize. Insights will appear once votes come in.",
+    "quoted": "\"{text}\"",
+    "tie": "Based on the {count, plural, one {# aggregated response} other {# aggregated responses}}, the simulated consensus is split evenly between {leaders}, each with {share}% of the vote. The distribution suggests there is no clear favorite yet, so a few more responses could decide the outcome.",
+    "lead": "Based on the {count, plural, one {# aggregated response} other {# aggregated responses}}, the simulated consensus {strength, select, strong {strongly favors} clear {clearly favors} other {leans toward}} {leader} with {share}% of the vote.",
+    "runnerUp": "The distribution suggests {runnerUp} is the main alternative at {share}%, {margin, plural, one {# percentage point} other {# percentage points}} behind.",
+    "unanimous": "The distribution suggests complete agreement, as no other option has received a vote.",
+    "lowSample": "With so few responses, treat this as an early signal."
+  },
+  "notFound": {
+    "title": "This page could not be found",
+    "description": "The poll or page you are looking for does not exist or is no longer available.",
+    "back": "Back to polls"
+  }
+}

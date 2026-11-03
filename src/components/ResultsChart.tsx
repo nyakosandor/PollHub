@@ -13,8 +13,9 @@ import {
   YAxis,
   usePlotArea,
 } from "recharts";
+import { useTranslations } from "next-intl";
 import { PollResult } from "@/types";
-import { pluralize, toPercent } from "@/lib/format";
+import { toPercent } from "@/lib/format";
 import { getLeaders, rankResults } from "@/lib/results";
 
 const LEADER_COLOR = "#2a78d6";
@@ -32,6 +33,7 @@ interface ChartRow {
 }
 
 function ChartTooltip({ active, payload }: TooltipContentProps) {
+  const t = useTranslations("results");
   const row: ChartRow | undefined = payload?.[0]?.payload;
   if (!active || !row) return null;
   const { name, count, share } = row;
@@ -39,7 +41,7 @@ function ChartTooltip({ active, payload }: TooltipContentProps) {
     <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-md">
       <p className="font-semibold text-slate-900">{share}%</p>
       <p className="text-slate-600">{name}</p>
-      <p className="text-slate-500">{pluralize(count, "vote")}</p>
+      <p className="text-slate-500">{t("votes", { count })}</p>
     </div>
   );
 }
@@ -78,10 +80,12 @@ interface ResultsChartProps {
 }
 
 export default function ResultsChart({ results, totalVotes }: ResultsChartProps) {
+  const t = useTranslations("results");
+
   if (totalVotes === 0) {
     return (
       <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-        No votes have been cast yet.
+        {t("noVotes")}
       </div>
     );
   }
@@ -111,7 +115,7 @@ export default function ResultsChart({ results, totalVotes }: ResultsChartProps)
           />
           <YAxis type="category" dataKey="optionId" hide />
           <Tooltip
-            content={ChartTooltip}
+            content={(props) => <ChartTooltip {...props} />}
             cursor={{ fill: "rgba(42,120,214,0.06)" }}
           />
           <Bar

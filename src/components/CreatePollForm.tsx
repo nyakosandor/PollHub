@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { usePolls } from "@/context/PollContext";
 import { NewPoll } from "@/types";
 import {
@@ -29,27 +30,40 @@ const createEmptyDraftOptions = () =>
 const createDefaultClosingInput = () =>
   toDateTimeInputValue(defaultClosingTime(Date.now()));
 
-function validatePoll({ title, questionText, optionTexts, closesAt }: NewPoll) {
-  if (!title) return "Please enter a poll title.";
-  if (!questionText) return "Please enter a poll question.";
+type ValidationError =
+  | "titleRequired"
+  | "questionRequired"
+  | "optionsRequired"
+  | "closingTimeRequired"
+  | "closingTimeInPast";
+
+function validatePoll({
+  title,
+  questionText,
+  optionTexts,
+  closesAt,
+}: NewPoll): ValidationError | null {
+  if (!title) return "titleRequired";
+  if (!questionText) return "questionRequired";
   if (optionTexts.length < MIN_OPTIONS) {
-    return "Please provide at least two answer options.";
+    return "optionsRequired";
   }
-  if (Number.isNaN(closesAt)) return "Please choose a closing time.";
+  if (Number.isNaN(closesAt)) return "closingTimeRequired";
   if (isClosed(closesAt, Date.now())) {
-    return "The closing time must be in the future.";
+    return "closingTimeInPast";
   }
   return null;
 }
 
 export default function CreatePollForm() {
+  const t = useTranslations("form");
   const { createPoll } = usePolls();
   const scheduleTimeout = useTimeout();
   const [title, setTitle] = useState("");
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<DraftOption[]>(createEmptyDraftOptions);
   const [closingInput, setClosingInput] = useState(createDefaultClosingInput);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ValidationError | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
   const updateOption = (id: string, text: string) => {
@@ -102,14 +116,14 @@ export default function CreatePollForm() {
           htmlFor="poll-title"
           className="mb-1.5 block text-sm font-medium text-slate-700"
         >
-          Title
+          {t("title")}
         </label>
         <input
           id="poll-title"
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g. Team lunch"
+          placeholder={t("titlePlaceholder")}
           className={INPUT_CLASS}
         />
       </div>
@@ -119,21 +133,21 @@ export default function CreatePollForm() {
           htmlFor="poll-question"
           className="mb-1.5 block text-sm font-medium text-slate-700"
         >
-          Question
+          {t("question")}
         </label>
         <input
           id="poll-question"
           type="text"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="e.g. What should our next team lunch spot be?"
+          placeholder={t("questionPlaceholder")}
           className={INPUT_CLASS}
         />
       </div>
 
       <fieldset>
         <legend className="mb-1.5 block text-sm font-medium text-slate-700">
-          Answer options
+          {t("options")}
         </legend>
         <div className="flex flex-col gap-2">
           {options.map((option, index) => (
@@ -142,7 +156,7 @@ export default function CreatePollForm() {
                 type="text"
                 value={option.text}
                 onChange={(e) => updateOption(option.id, e.target.value)}
-                placeholder={`Option ${index + 1}`}
+                placeholder={t("optionPlaceholder", { number: index + 1 })}
                 className={INPUT_CLASS}
               />
               {options.length > MIN_OPTIONS && (
@@ -150,7 +164,7 @@ export default function CreatePollForm() {
                   type="button"
                   onClick={() => removeOption(option.id)}
                   className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500"
-                  aria-label={`Remove option ${index + 1}`}
+                  aria-label={t("removeOption", { number: index + 1 })}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -164,7 +178,7 @@ export default function CreatePollForm() {
           className="mt-2 flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700"
         >
           <PlusCircle className="h-4 w-4" />
-          Add option
+          {t("addOption")}
         </button>
       </fieldset>
 
@@ -173,7 +187,7 @@ export default function CreatePollForm() {
           htmlFor="poll-closes-at"
           className="mb-1.5 block text-sm font-medium text-slate-700"
         >
-          Closing time
+          {t("closingTime")}
         </label>
         <input
           id="poll-closes-at"
@@ -184,19 +198,24 @@ export default function CreatePollForm() {
         />
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <p role="alert" data-testid="form-error" data-error={error} className="text-sm text-red-600">
+          {t(`errors.${error}`)}
+        </p>
+      )}
       {showSuccess && (
-        <p className="text-sm font-medium text-emerald-600">
-          Poll created successfully!
+        <p data-testid="form-success" className="text-sm font-medium text-emerald-600">
+          {t("success")}
         </p>
       )}
 
       <button
         type="submit"
+        data-testid="create-poll-submit"
         className="flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
       >
         <Plus className="h-4 w-4" />
-        Create Poll
+        {t("submit")}
       </button>
     </form>
   );

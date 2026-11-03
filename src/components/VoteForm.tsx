@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Poll, Question } from "@/types";
 import { usePolls } from "@/context/PollContext";
 import { CheckCircle2, Lock, Send } from "lucide-react";
@@ -11,6 +12,7 @@ interface VoteFormProps {
 }
 
 export default function VoteForm({ poll, question }: VoteFormProps) {
+  const t = useTranslations("vote");
   const { castVote, hasVoted, isPollClosed } = usePolls();
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [justVoted, setJustVoted] = useState(false);
@@ -27,19 +29,27 @@ export default function VoteForm({ poll, question }: VoteFormProps) {
 
   if (isClosed) {
     return (
-      <div className="flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-medium text-slate-600">
+      <div
+        data-testid="vote-closed"
+        className="flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-medium text-slate-600"
+      >
         <Lock className="h-4 w-4" />
-        This poll is closed. Voting is no longer available.
+        {t("closed")}
       </div>
     );
   }
 
   if (isVoted) {
     return (
-      <div className="flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-3 text-sm font-medium text-indigo-700">
+      <div
+        data-testid="vote-confirmation"
+        className="flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-3 text-sm font-medium text-indigo-700"
+      >
         <CheckCircle2 className="h-4 w-4" />
-        {justVoted ? "Thanks for voting! " : ""}Already voted — you can view the
-        results below.
+        <span>
+          {justVoted && `${t("thanks")} `}
+          {t("alreadyVoted")}
+        </span>
       </div>
     );
   }
@@ -74,10 +84,11 @@ export default function VoteForm({ poll, question }: VoteFormProps) {
         type="button"
         onClick={handleSubmit}
         disabled={!selectedOptionId}
+        data-testid="submit-vote"
         className="flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
       >
         <Send className="h-4 w-4" />
-        Submit Vote
+        {t("submit")}
       </button>
     </div>
   );

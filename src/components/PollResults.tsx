@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Poll, Question } from "@/types";
 import { usePolls } from "@/context/PollContext";
 import AIInsights from "@/components/AIInsights";
@@ -14,6 +15,7 @@ interface PollResultsProps {
 }
 
 export default function PollResults({ poll, question }: PollResultsProps) {
+  const t = useTranslations("results");
   const { getResults, getTotalVotes } = usePolls();
   const results = getResults(question.id);
   const totalVotes = getTotalVotes(question.id);
@@ -22,7 +24,7 @@ export default function PollResults({ poll, question }: PollResultsProps) {
     <div className="flex flex-col gap-4">
       <ResultKpis poll={poll} results={results} totalVotes={totalVotes} />
 
-      <Card title="Results">
+      <Card title={t("title")}>
         <p className="mb-4 text-sm text-slate-600">{question.text}</p>
         <ResultsChart results={results} totalVotes={totalVotes} />
         {totalVotes > 0 && (

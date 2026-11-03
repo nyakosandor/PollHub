@@ -1,0 +1,114 @@
+{
+  "metadata": {
+    "title": "PollHub",
+    "description": "Kérdőívek és szavazások gyűjtése és kiértékelése."
+  },
+  "nav": {
+    "home": "PollHub kezdőlap",
+    "managerDashboard": "Menedzser irányítópult",
+    "roleSwitcher": "Aktív szerepkör",
+    "roles": {
+      "Participant": "Résztvevő",
+      "Manager": "Menedzser"
+    },
+    "language": "Nyelv",
+    "languages": {
+      "hu": "Magyar",
+      "en": "English"
+    }
+  },
+  "dashboard": {
+    "title": "Szavazások",
+    "subtitle": "Böngészd a szavazásokat és add le a szavazatod, vagy válts Menedzser módra szavazások létrehozásához és kezeléséhez."
+  },
+  "status": {
+    "open": "Nyitott",
+    "closed": "Lezárva"
+  },
+  "pollList": {
+    "empty": "Még nincsenek szavazások.",
+    "voted": "Szavaztál",
+    "stats": "{votes, plural, other {# szavazat}} · {options, plural, other {# opció}}"
+  },
+  "manager": {
+    "title": "Menedzser irányítópult",
+    "subtitle": "Hozz létre új szavazásokat, és kezeld a meglévők állapotát.",
+    "createHeading": "Új szavazás létrehozása",
+    "allPolls": "Összes szavazás"
+  },
+  "form": {
+    "title": "Cím",
+    "titlePlaceholder": "pl. Csapatebéd",
+    "question": "Kérdés",
+    "questionPlaceholder": "pl. Hol legyen a következő csapatebéd?",
+    "options": "Válaszlehetőségek",
+    "optionPlaceholder": "{number}. opció",
+    "removeOption": "{number}. opció törlése",
+    "addOption": "Opció hozzáadása",
+    "closingTime": "Lezárási idő",
+    "submit": "Szavazás létrehozása",
+    "success": "A szavazás sikeresen létrejött!",
+    "errors": {
+      "titleRequired": "Add meg a szavazás címét.",
+      "questionRequired": "Add meg a szavazás kérdését.",
+      "optionsRequired": "Adj meg legalább két válaszlehetőséget.",
+      "closingTimeRequired": "Válassz lezárási időt.",
+      "closingTimeInPast": "A lezárási időnek a jövőben kell lennie."
+    }
+  },
+  "poll": {
+    "back": "Vissza a szavazásokhoz",
+    "closingTime": "{isClosed, select, true {Lezárult:} other {Lezárul:}} {date}",
+    "castVote": "Add le a szavazatod",
+    "closePoll": "Szavazás lezárása",
+    "pollClosed": "Szavazás lezárva"
+  },
+  "vote": {
+    "closed": "Ez a szavazás lezárult. Szavazni már nem lehet.",
+    "thanks": "Köszönjük a szavazatod!",
+    "alreadyVoted": "Már szavaztál — az eredményeket lent láthatod.",
+    "submit": "Szavazat leadása"
+  },
+  "results": {
+    "title": "Eredmények",
+    "noVotes": "Még nem érkezett szavazat.",
+    "votes": "{count, plural, other {# szavazat}}",
+    "viewTable": "Megtekintés táblázatként",
+    "table": {
+      "option": "Opció",
+      "votes": "Szavazat",
+      "share": "Arány"
+    }
+  },
+  "kpi": {
+    "totalVotes": "Összes szavazat",
+    "acrossOptions": "{count, plural, other {# opció}} között",
+    "leadingOption": "Vezető opció",
+    "noVotesYet": "Még nincs szavazat",
+    "waitingForFirstVote": "Az első szavazatra várunk",
+    "tied": "Holtverseny, egyenként {share}%",
+    "shareOfVotes": "A szavazatok {share}%-a",
+    "timeRemaining": "Hátralévő idő",
+    "closed": "Lezárva",
+    "votingEnded": "A szavazás véget ért",
+    "votingOpen": "A szavazás nyitva van",
+    "closesIn": "{unit, select, minute {{count, plural, other {# perc}}} hour {{count, plural, other {# óra}}} other {{count, plural, other {# nap}}}} múlva zárul"
+  },
+  "insights": {
+    "title": "AI elemzés",
+    "subtitle": "Összesített, fiktív válaszok szimulált összefoglalója",
+    "loading": "AI elemzés készítése...",
+    "empty": "Még nincsenek összesített válaszok, így a szimulált elemzésnek nincs mit összefoglalnia. Az elemzés a szavazatok beérkezése után jelenik meg.",
+    "quoted": "„{text}”",
+    "tie": "Összesen {count, plural, other {# összesített válasz}} alapján a szimulált konszenzus egyenlően oszlik meg a következők között: {leaders}, mindegyik a szavazatok {share}%-ával. Az eloszlás alapján még nincs egyértelmű favorit, így néhány további válasz eldöntheti az eredményt.",
+    "lead": "Összesen {count, plural, other {# összesített válasz}} alapján a szimulált konszenzus {strength, select, strong {erőteljesen} clear {egyértelműen} other {enyhén}} ezt az opciót részesíti előnyben: {leader}, a szavazatok {share}%-ával.",
+    "runnerUp": "Az eloszlás alapján a fő alternatíva: {runnerUp} ({share}%), {margin, plural, other {# százalékponttal}} lemaradva.",
+    "unanimous": "Az eloszlás teljes egyetértést mutat, mivel egyetlen másik opció sem kapott szavazatot.",
+    "lowSample": "Ilyen kevés válasz mellett ezt csak korai jelzésként érdemes kezelni."
+  },
+  "notFound": {
+    "title": "Az oldal nem található",
+    "description": "A keresett szavazás vagy oldal nem létezik, vagy már nem érhető el.",
+    "back": "Vissza a szavazásokhoz"
+  }
+}

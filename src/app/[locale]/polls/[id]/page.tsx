@@ -1,7 +1,8 @@
 "use client";
 
 import { use } from "react";
-import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
 import { usePolls } from "@/context/PollContext";
 import { formatClosingTime } from "@/lib/closingTime";
@@ -15,9 +16,11 @@ import { ArrowLeft } from "lucide-react";
 export default function PollDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ locale: string; id: string }>;
 }) {
   const { id } = use(params);
+  const t = useTranslations("poll");
+  const locale = useLocale();
   const { getPoll, getPollQuestion, isPollClosed, role, isHydrated } = usePolls();
 
   // Polls created in the browser only exist after localStorage hydration,
@@ -42,7 +45,7 @@ export default function PollDetailPage({
         className="flex w-fit items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to polls
+        {t("back")}
       </Link>
 
       <Card>
@@ -51,7 +54,10 @@ export default function PollDetailPage({
         </div>
         <h1 className="text-xl font-semibold text-slate-900">{poll.title}</h1>
         <p className="mt-1 text-xs text-slate-500">
-          {isClosed ? "Closed" : "Closes"} {formatClosingTime(poll.closesAt)}
+          {t("closingTime", {
+            isClosed: String(isClosed),
+            date: formatClosingTime(poll.closesAt, locale),
+          })}
         </p>
         {role === "Manager" && (
           <div className="mt-4 border-t border-slate-100 pt-4">
@@ -61,7 +67,7 @@ export default function PollDetailPage({
       </Card>
 
       {role === "Participant" && (
-        <Card title="Cast your vote">
+        <Card title={t("castVote")}>
           <VoteForm poll={poll} question={question} />
         </Card>
       )}

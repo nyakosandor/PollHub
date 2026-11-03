@@ -317,3 +317,63 @@ Constraint: Run these steps autonomously.
 ```
 
 **Outcome:** Deleted the remote `refactor/ddd-domain-model` branch, replaced the boilerplate `README.md` with Hungarian project documentation, and pushed it to `main`. The README states that the one-vote check currently runs per poll, which equals per question while each poll has one question.
+
+## 2026-11-03
+
+### Prompt 10
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+Role: Senior Full-Stack Next.js Architect
+Task: Implement production-grade Internationalization (i18n) using next-intl for the final Next.js App Router application.
+
+Context:
+We are moving from an MVP to the final, production-ready web application. The custom React Context for translations is not sufficient anymore. We must implement proper localized routing and server-side translation support (EN/HU) using the industry standard next-intl library.
+
+Execution Steps:
+
+Install Dependencies:
+
+Install next-intl.
+
+Configure next-intl for App Router:
+
+Create the necessary folder structure for Next.js App Router i18n: move the existing app contents into an app/[locale] dynamic route folder.
+
+Create messages/en.json and messages/hu.json in the root directory containing all UI text, including complex strings for the Dashboard, Voting, and AI Insights.
+
+Set up i18n.ts (request configuration).
+
+Set up middleware.ts in the root to handle locale detection and redirection (default: hu, supported: hu, en).
+
+Configure next.config.js with the next-intl/plugin.
+
+Refactor Components:
+
+Replace all hardcoded strings with useTranslations (in Client Components) or getTranslations (in Server Components).
+
+Build a sleek LanguageSwitcher component in the Navbar to let users switch between English and Hungarian, updating the URL routing accordingly.
+
+Update the AIInsights simulated LLM logic to generate its text based on the active locale.
+
+Fix E2E Tests (CRITICAL):
+
+The introduction of the /[locale]/ route segment and translated UI elements will break the current Playwright tests.
+
+Refactor the Playwright configuration and the 20 test cases to work with the localized URLs (e.g., navigating to /hu/ or /en/) and rely on test IDs (data-testid) or translated assertions. Ensure all tests pass.
+
+Commit and Push:
+
+Once all typing issues are resolved, the app builds cleanly (next build), and E2E tests are 100% green, execute:
+
+git add .
+
+git commit -m "feat: migrate to production-grade i18n using next-intl with localized routing"
+
+git push
+
+Constraint: Perform these complex architectural changes autonomously. Do not ask for permission if the build and tests are passing.
+```
+
+**Outcome:** Added next-intl 4 with `/hu` and `/en` routes (default `hu`, browser-language detection), `messages/en.json` and `messages/hu.json`, a `LanguageSwitcher` in the navbar, and locale-aware AI insights. Used `src/proxy.ts` instead of `middleware.ts` (deprecated in Next.js 16) and `src/i18n/request.ts` as the request config. The 20 E2E tests now run in both locales with test IDs and assertions translated from the message files, plus 4 new i18n tests: 48/48 pass, and `next build`, `tsc` and ESLint are clean.

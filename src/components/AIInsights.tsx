@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { PollResult } from "@/types";
 import { buildInsightSummary } from "@/lib/insights";
 import { useTimeout } from "@/lib/useTimeout";
@@ -15,6 +16,8 @@ interface AIInsightsProps {
 }
 
 export default function AIInsights({ results, totalVotes }: AIInsightsProps) {
+  const t = useTranslations("insights");
+  const format = useFormatter();
   const [isLoading, setIsLoading] = useState(true);
   const scheduleTimeout = useTimeout();
 
@@ -23,25 +26,24 @@ export default function AIInsights({ results, totalVotes }: AIInsightsProps) {
   }, [scheduleTimeout]);
 
   return (
-    <section className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-5 shadow-sm">
+    <section
+      data-testid="ai-insights"
+      className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-5 shadow-sm"
+    >
       <div className="mb-3 flex items-center gap-2.5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
           <Sparkles className="h-4 w-4" />
         </div>
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">AI Insights</h2>
-          <p className="text-xs text-slate-500">
-            Simulated summary of aggregated, fictitious responses
-          </p>
+          <h2 className="text-sm font-semibold text-slate-900">{t("title")}</h2>
+          <p className="text-xs text-slate-500">{t("subtitle")}</p>
         </div>
       </div>
 
       <div aria-live="polite">
         {isLoading ? (
-          <div className="flex flex-col gap-2.5">
-            <p className="text-sm font-medium text-indigo-700">
-              Generating AI insights...
-            </p>
+          <div data-testid="ai-insights-loading" className="flex flex-col gap-2.5">
+            <p className="text-sm font-medium text-indigo-700">{t("loading")}</p>
             <div
               aria-hidden="true"
               className="flex animate-pulse flex-col gap-2 motion-reduce:animate-none"
@@ -55,8 +57,14 @@ export default function AIInsights({ results, totalVotes }: AIInsightsProps) {
             </div>
           </div>
         ) : (
-          <p className="text-sm leading-relaxed text-slate-700 transition-opacity duration-500 starting:opacity-0">
-            {buildInsightSummary(results, totalVotes)}
+          <p
+            data-testid="ai-insights-summary"
+            className="text-sm leading-relaxed text-slate-700 transition-opacity duration-500 starting:opacity-0"
+          >
+            {buildInsightSummary(results, totalVotes, {
+              t,
+              formatList: (items) => format.list(items, { type: "conjunction" }),
+            })}
           </p>
         )}
       </div>

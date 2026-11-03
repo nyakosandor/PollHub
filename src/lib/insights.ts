@@ -1,46 +1,77 @@
 import { PollResult } from "@/types";
-import { formatList, pluralize, toPercent } from "@/lib/format";
+import { toPercent } from "@/lib/format";
 import { getLeaders, rankResults } from "@/lib/results";
 
 const LOW_SAMPLE_SIZE = 5;
 
-function describeConsensus(marginPoints: number) {
-  if (marginPoints >= 30) return "strongly favors";
-  if (marginPoints >= 15) return "clearly favors";
-  return "leans toward";
+export type ConsensusStrength = "strong" | "clear" | "slight";
+
+type InsightMessageKey =
+  | "empty"
+  | "quoted"
+  | "tie"
+  | "lead"
+  | "runnerUp"
+  | "unanimous"
+  | "lowSample";
+
+interface InsightLocale {
+  /** Translates the `insights` namespace, e.g. useTranslations("insights"). */
+  t: (key: InsightMessageKey, values?: Record<string, string | number>) => string;
+  /** Joins items in the active locale, e.g. "A and B" or "A és B". */
+  formatList: (items: string[]) => string;
 }
 
-const quote = (result: PollResult) => `"${result.option.text}"`;
+function describeConsensus(marginPoints: number): ConsensusStrength {
+  if (marginPoints >= 30) return "strong";
+  if (marginPoints >= 15) return "clear";
+  return "slight";
+}
 
 /**
- * Builds a simulated "AI" analysis. It reads only aggregated vote counts, never
- * individual votes, as the spec requires of the LLM summary.
+ * Builds a simulated "AI" analysis in the active locale. It reads only
+ * aggregated vote counts, never individual votes, as the spec requires of the
+ * LLM summary.
  */
-export function buildInsightSummary(results: PollResult[], totalVotes: number) {
-  if (totalVotes === 0) {
-    return "No responses have been aggregated yet, so there is nothing for the simulated analysis to summarize. Insights will appear once votes come in.";
-  }
+export function buildInsightSummary(
+  results: PollResult[],
+  totalVotes: number,
+  { t, formatList }: InsightLocale
+) {
+  if (totalVotes === 0) return t("empty");
 
-  const opening = `Based on the ${pluralize(totalVotes, "aggregated response")}, the simulated consensus`;
-  const caveat =
-    totalVotes < LOW_SAMPLE_SIZE
-      ? " With so few responses, treat this as an early signal."
-      : "";
+  const quote = (result: PollResult) => t("quoted", { text: result.option.text });
   const shareOf = (result: PollResult) => toPercent(result.count, totalVotes);
+  const caveat = totalVotes < LOW_SAMPLE_SIZE ? [t("lowSample")] : [];
 
   const leaders = getLeaders(results);
   const leader = leaders[0];
 
   if (leaders.length > 1) {
-    return `${opening} is split evenly between ${formatList(leaders.map(quote))}, each with ${shareOf(leader)}% of the vote. The distribution suggests there is no clear favorite yet, so a few more responses could decide the outcome.${caveat}`;
+    const tie = t("tie", {
+      count: totalVotes,
+      leaders: formatList(leaders.map(quote)),
+      share: shareOf(leader),
+    });
+    return [tie, ...caveat].join(" ");
   }
 
   const runnerUp = rankResults(results)[1];
   const marginPoints = shareOf(leader) - (runnerUp ? shareOf(runnerUp) : 0);
+  const lead = t("lead", {
+    count: totalVotes,
+    strength: describeConsensus(marginPoints),
+    leader: quote(leader),
+    share: shareOf(leader),
+  });
   const distribution =
     runnerUp && runnerUp.count > 0
-      ? `The distribution suggests ${quote(runnerUp)} is the main alternative at ${shareOf(runnerUp)}%, ${pluralize(marginPoints, "percentage point")} behind.`
-      : "The distribution suggests complete agreement, as no other option has received a vote.";
+      ? t("runnerUp", {
+          runnerUp: quote(runnerUp),
+          share: shareOf(runnerUp),
+          margin: marginPoints,
+        })
+      : t("unanimous");
 
-  return `${opening} ${describeConsensus(marginPoints)} ${quote(leader)} with ${shareOf(leader)}% of the vote. ${distribution}${caveat}`;
+  return [lead, distribution, ...caveat].join(" ");
 }

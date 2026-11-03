@@ -1,27 +1,30 @@
 "use client";
 
+import { useFormatter, useTranslations } from "next-intl";
 import { Clock, Lock, LucideIcon, Trophy, Users } from "lucide-react";
 import { Poll, PollResult } from "@/types";
 import { usePolls } from "@/context/PollContext";
-import { formatTimeRemaining } from "@/lib/closingTime";
-import { formatList, pluralize, toPercent } from "@/lib/format";
+import { getTimeRemaining } from "@/lib/closingTime";
+import { toPercent } from "@/lib/format";
 import { getLeaders } from "@/lib/results";
 import { useNow } from "@/lib/useNow";
 
 const COUNTDOWN_REFRESH_MS = 30 * 1000;
 
 interface KpiCardProps {
+  testId: string;
   label: string;
   icon: LucideIcon;
   value: string | number;
   detail: string;
 }
 
-function KpiCard({ label, icon: Icon, value, detail }: KpiCardProps) {
+function KpiCard({ testId, label, icon: Icon, value, detail }: KpiCardProps) {
   return (
     <div
       role="group"
       aria-label={label}
+      data-testid={testId}
       className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
     >
       <div className="flex items-center justify-between gap-2">
@@ -37,30 +40,27 @@ function KpiCard({ label, icon: Icon, value, detail }: KpiCardProps) {
 }
 
 function TimeRemainingCard({ poll }: { poll: Poll }) {
+  const t = useTranslations("kpi");
   const { isPollClosed } = usePolls();
   const now = useNow(COUNTDOWN_REFRESH_MS);
 
   return isPollClosed(poll) ? (
     <KpiCard
-      label="Time remaining"
+      testId="kpi-time-remaining"
+      label={t("timeRemaining")}
       icon={Lock}
-      value="Closed"
-      detail="Voting has ended"
+      value={t("closed")}
+      detail={t("votingEnded")}
     />
   ) : (
     <KpiCard
-      label="Time remaining"
+      testId="kpi-time-remaining"
+      label={t("timeRemaining")}
       icon={Clock}
-      value={formatTimeRemaining(poll.closesAt, now)}
-      detail="Voting is open"
+      value={t("closesIn", getTimeRemaining(poll.closesAt, now))}
+      detail={t("votingOpen")}
     />
   );
-}
-
-function describeLead(leaders: PollResult[], totalVotes: number) {
-  if (leaders.length === 0) return "Waiting for the first vote";
-  const share = toPercent(leaders[0].count, totalVotes);
-  return leaders.length > 1 ? `Tied at ${share}% each` : `${share}% of votes`;
 }
 
 interface ResultKpisProps {
@@ -70,25 +70,38 @@ interface ResultKpisProps {
 }
 
 export default function ResultKpis({ poll, results, totalVotes }: ResultKpisProps) {
+  const t = useTranslations("kpi");
+  const format = useFormatter();
   const leaders = getLeaders(results);
+
+  const describeLead = () => {
+    if (leaders.length === 0) return t("waitingForFirstVote");
+    const share = toPercent(leaders[0].count, totalVotes);
+    return leaders.length > 1 ? t("tied", { share }) : t("shareOfVotes", { share });
+  };
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <KpiCard
-        label="Total votes"
+        testId="kpi-total-votes"
+        label={t("totalVotes")}
         icon={Users}
         value={totalVotes}
-        detail={`Across ${pluralize(results.length, "option")}`}
+        detail={t("acrossOptions", { count: results.length })}
       />
       <KpiCard
-        label="Leading option"
+        testId="kpi-leading-option"
+        label={t("leadingOption")}
         icon={Trophy}
         value={
           leaders.length > 0
-            ? formatList(leaders.map(({ option }) => option.text))
-            : "No votes yet"
+            ? format.list(
+                leaders.map(({ option }) => option.text),
+                { type: "conjunction" }
+              )
+            : t("noVotesYet")
         }
-        detail={describeLead(leaders, totalVotes)}
+        detail={describeLead()}
       />
       <TimeRemainingCard poll={poll} />
     </div>
