@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Locale } from "@/i18n/routing";
 import PollList from "@/components/PollList";
+import { PAGE_SUBTITLE, PAGE_TITLE } from "@/lib/ui";
 
 export default async function DashboardPage({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
@@ -8,11 +9,11 @@ export default async function DashboardPage({ params }: PageProps<"/[locale]">) 
   const t = await getTranslations({ locale: locale as Locale, namespace: "dashboard" });
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">{t("title")}</h1>
-        <p className="mt-1 text-sm text-slate-500">{t("subtitle")}</p>
-      </div>
+    <div className="flex flex-col gap-8 sm:gap-10">
+      <header>
+        <h1 className={PAGE_TITLE}>{t("title")}</h1>
+        <p className={PAGE_SUBTITLE}>{t("subtitle")}</p>
+      </header>
       <PollList />
     </div>
   );

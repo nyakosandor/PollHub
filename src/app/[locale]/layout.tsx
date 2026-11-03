@@ -50,11 +50,11 @@ export default async function LocaleLayout({
       lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
+      <body className="flex min-h-full flex-col bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <NextIntlClientProvider>
           <PollProvider>
             <Navbar />
-            <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-6 sm:px-6">
+            <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
               {children}
             </main>
           </PollProvider>

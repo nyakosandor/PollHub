@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Poll } from "@/types";
 import { usePolls } from "@/context/PollContext";
+import { BUTTON_SECONDARY } from "@/lib/ui";
 import { Lock } from "lucide-react";
 
 export default function ClosePollButton({ poll }: { poll: Poll }) {
@@ -16,9 +17,9 @@ export default function ClosePollButton({ poll }: { poll: Poll }) {
       onClick={() => closePoll(poll.id)}
       disabled={isClosed}
       data-testid="close-poll"
-      className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+      className={`${BUTTON_SECONDARY} hover:border-red-200 hover:bg-red-50 hover:text-red-700 dark:hover:border-red-500/40 dark:hover:bg-red-500/10 dark:hover:text-red-300`}
     >
-      <Lock className="h-3.5 w-3.5" />
+      <Lock aria-hidden="true" className="h-4 w-4" />
       {isClosed ? t("pollClosed") : t("closePoll")}
     </button>
   );

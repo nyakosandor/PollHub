@@ -11,12 +11,11 @@ import {
 } from "@/lib/closingTime";
 import { createId } from "@/lib/ids";
 import { useTimeout } from "@/lib/useTimeout";
-import { Plus, Trash2, PlusCircle } from "lucide-react";
+import { BUTTON_GHOST, BUTTON_PRIMARY, CARD, ICON_BUTTON, INPUT, LABEL } from "@/lib/ui";
+import { AlertCircle, CheckCircle2, Plus, PlusCircle, Trash2 } from "lucide-react";
 
 const MIN_OPTIONS = 2;
 const SUCCESS_MESSAGE_MS = 2500;
-const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100";
 
 interface DraftOption {
   id: string;
@@ -109,13 +108,10 @@ export default function CreatePollForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5"
+      className={`${CARD} flex flex-col gap-6 p-6 sm:p-8`}
     >
       <div>
-        <label
-          htmlFor="poll-title"
-          className="mb-1.5 block text-sm font-medium text-slate-700"
-        >
+        <label htmlFor="poll-title" className={LABEL}>
           {t("title")}
         </label>
         <input
@@ -124,15 +120,12 @@ export default function CreatePollForm() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder={t("titlePlaceholder")}
-          className={INPUT_CLASS}
+          className={INPUT}
         />
       </div>
 
       <div>
-        <label
-          htmlFor="poll-question"
-          className="mb-1.5 block text-sm font-medium text-slate-700"
-        >
+        <label htmlFor="poll-question" className={LABEL}>
           {t("question")}
         </label>
         <input
@@ -141,32 +134,36 @@ export default function CreatePollForm() {
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder={t("questionPlaceholder")}
-          className={INPUT_CLASS}
+          className={INPUT}
         />
       </div>
 
       <fieldset>
-        <legend className="mb-1.5 block text-sm font-medium text-slate-700">
-          {t("options")}
-        </legend>
-        <div className="flex flex-col gap-2">
+        <legend className={LABEL}>{t("options")}</legend>
+        <div className="flex flex-col gap-2.5">
           {options.map((option, index) => (
             <div key={option.id} className="flex items-center gap-2">
+              <span
+                aria-hidden="true"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500 tabular-nums dark:bg-slate-800 dark:text-slate-400"
+              >
+                {index + 1}
+              </span>
               <input
                 type="text"
                 value={option.text}
                 onChange={(e) => updateOption(option.id, e.target.value)}
                 placeholder={t("optionPlaceholder", { number: index + 1 })}
-                className={INPUT_CLASS}
+                className={INPUT}
               />
               {options.length > MIN_OPTIONS && (
                 <button
                   type="button"
                   onClick={() => removeOption(option.id)}
-                  className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                  className={ICON_BUTTON}
                   aria-label={t("removeOption", { number: index + 1 })}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 aria-hidden="true" className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -175,18 +172,15 @@ export default function CreatePollForm() {
         <button
           type="button"
           onClick={addOption}
-          className="mt-2 flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700"
+          className={`${BUTTON_GHOST} mt-3 ml-6`}
         >
-          <PlusCircle className="h-4 w-4" />
+          <PlusCircle aria-hidden="true" className="h-4 w-4" />
           {t("addOption")}
         </button>
       </fieldset>
 
-      <div>
-        <label
-          htmlFor="poll-closes-at"
-          className="mb-1.5 block text-sm font-medium text-slate-700"
-        >
+      <div className="sm:max-w-xs">
+        <label htmlFor="poll-closes-at" className={LABEL}>
           {t("closingTime")}
         </label>
         <input
@@ -194,29 +188,51 @@ export default function CreatePollForm() {
           type="datetime-local"
           value={closingInput}
           onChange={(e) => setClosingInput(e.target.value)}
-          className={INPUT_CLASS}
+          className={INPUT}
         />
       </div>
 
       {error && (
-        <p role="alert" data-testid="form-error" data-error={error} className="text-sm text-red-600">
-          {t(`errors.${error}`)}
-        </p>
+        <div className="flex items-start gap-2.5 rounded-xl bg-red-50 px-4 py-3 ring-1 ring-red-600/15 ring-inset dark:bg-red-500/10 dark:ring-red-400/25">
+          <AlertCircle
+            aria-hidden="true"
+            className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400"
+          />
+          <p
+            role="alert"
+            data-testid="form-error"
+            data-error={error}
+            className="text-sm font-medium text-red-700 dark:text-red-300"
+          >
+            {t(`errors.${error}`)}
+          </p>
+        </div>
       )}
       {showSuccess && (
-        <p data-testid="form-success" className="text-sm font-medium text-emerald-600">
-          {t("success")}
-        </p>
+        <div className="flex items-start gap-2.5 rounded-xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-600/15 ring-inset dark:bg-emerald-500/10 dark:ring-emerald-400/25">
+          <CheckCircle2
+            aria-hidden="true"
+            className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+          />
+          <p
+            data-testid="form-success"
+            className="text-sm font-medium text-emerald-700 dark:text-emerald-300"
+          >
+            {t("success")}
+          </p>
+        </div>
       )}
 
-      <button
-        type="submit"
-        data-testid="create-poll-submit"
-        className="flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
-      >
-        <Plus className="h-4 w-4" />
-        {t("submit")}
-      </button>
+      <div className="flex border-t border-slate-100 pt-6 dark:border-slate-800">
+        <button
+          type="submit"
+          data-testid="create-poll-submit"
+          className={`${BUTTON_PRIMARY} w-full py-3 sm:ml-auto sm:w-auto`}
+        >
+          <Plus aria-hidden="true" className="h-4 w-4" />
+          {t("submit")}
+        </button>
+      </div>
     </form>
   );
 }

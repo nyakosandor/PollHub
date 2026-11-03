@@ -28,22 +28,30 @@ export default function AIInsights({ results, totalVotes }: AIInsightsProps) {
   return (
     <section
       data-testid="ai-insights"
-      className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-5 shadow-sm"
+      className="relative overflow-hidden rounded-2xl border border-primary-100 bg-gradient-to-br from-primary-50 via-white to-violet-50 p-6 shadow-sm sm:p-8 dark:border-primary-500/20 dark:from-primary-950/60 dark:via-slate-900 dark:to-violet-950/40"
     >
-      <div className="mb-3 flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
-          <Sparkles className="h-4 w-4" />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full bg-primary-400/15 blur-3xl dark:bg-primary-500/15"
+      />
+      <div className="relative mb-5 flex items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-violet-600 text-white shadow-md shadow-primary-600/25">
+          <Sparkles aria-hidden="true" className="h-5 w-5" />
         </div>
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">{t("title")}</h2>
-          <p className="text-xs text-slate-500">{t("subtitle")}</p>
+          <h2 className="text-base font-semibold tracking-tight text-slate-900 dark:text-white">
+            {t("title")}
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{t("subtitle")}</p>
         </div>
       </div>
 
-      <div aria-live="polite">
+      <div aria-live="polite" className="relative">
         {isLoading ? (
-          <div data-testid="ai-insights-loading" className="flex flex-col gap-2.5">
-            <p className="text-sm font-medium text-indigo-700">{t("loading")}</p>
+          <div data-testid="ai-insights-loading" className="flex flex-col gap-3">
+            <p className="text-sm font-medium text-primary-700 dark:text-primary-300">
+              {t("loading")}
+            </p>
             <div
               aria-hidden="true"
               className="flex animate-pulse flex-col gap-2 motion-reduce:animate-none"
@@ -51,7 +59,7 @@ export default function AIInsights({ results, totalVotes }: AIInsightsProps) {
               {SKELETON_LINE_WIDTHS.map((width) => (
                 <div
                   key={width}
-                  className={`h-3 rounded-full bg-indigo-100 ${width}`}
+                  className={`h-3 rounded-full bg-primary-100 dark:bg-primary-500/20 ${width}`}
                 />
               ))}
             </div>
@@ -59,7 +67,7 @@ export default function AIInsights({ results, totalVotes }: AIInsightsProps) {
         ) : (
           <p
             data-testid="ai-insights-summary"
-            className="text-sm leading-relaxed text-slate-700 transition-opacity duration-500 starting:opacity-0"
+            className="text-[15px] leading-relaxed text-slate-700 transition-opacity duration-500 starting:opacity-0 dark:text-slate-300"
           >
             {buildInsightSummary(results, totalVotes, {
               t,

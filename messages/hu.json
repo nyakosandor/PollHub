@@ -27,6 +27,8 @@
   },
   "pollList": {
     "empty": "Még nincsenek szavazások.",
+    "emptyHint": "Jelenleg nincs mire szavazni. Nézz vissza később, az új szavazások itt jelennek meg, amint közzéteszik őket.",
+    "emptyManagerHint": "Hozd létre az első szavazásodat a fenti űrlappal, és azonnal megjelenik itt.",
     "voted": "Szavaztál",
     "stats": "{votes, plural, other {# szavazat}} · {options, plural, other {# opció}}"
   },

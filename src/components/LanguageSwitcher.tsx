@@ -27,11 +27,14 @@ export default function LanguageSwitcher() {
       role="group"
       aria-label={t("language")}
       data-testid="language-switcher"
-      className={`flex items-center gap-0.5 rounded-full bg-slate-100 p-1 transition-opacity ${
+      className={`flex items-center gap-0.5 rounded-full bg-slate-100 p-1 ring-1 ring-inset ring-slate-200/70 transition-opacity duration-200 dark:bg-slate-900 dark:ring-slate-800 ${
         isPending ? "opacity-60" : ""
       }`}
     >
-      <Languages aria-hidden="true" className="ml-1.5 mr-0.5 h-3.5 w-3.5 text-slate-400" />
+      <Languages
+        aria-hidden="true"
+        className="mr-0.5 ml-1.5 hidden h-3.5 w-3.5 text-slate-400 sm:block dark:text-slate-500"
+      />
       {routing.locales.map((locale) => (
         <button
           key={locale}
@@ -43,10 +46,10 @@ export default function LanguageSwitcher() {
           aria-label={t(`languages.${locale}`)}
           title={t(`languages.${locale}`)}
           data-testid={`locale-switch-${locale}`}
-          className={`rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition ${
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide uppercase transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-95 dark:focus-visible:ring-offset-slate-950 ${
             locale === activeLocale
-              ? "bg-white text-indigo-700 shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
+              ? "bg-white text-primary-700 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-primary-300 dark:ring-slate-700"
+              : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
           }`}
         >
           {locale}

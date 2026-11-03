@@ -377,3 +377,61 @@ Constraint: Perform these complex architectural changes autonomously. Do not ask
 ```
 
 **Outcome:** Added next-intl 4 with `/hu` and `/en` routes (default `hu`, browser-language detection), `messages/en.json` and `messages/hu.json`, a `LanguageSwitcher` in the navbar, and locale-aware AI insights. Used `src/proxy.ts` instead of `middleware.ts` (deprecated in Next.js 16) and `src/i18n/request.ts` as the request config. The 20 E2E tests now run in both locales with test IDs and assertions translated from the message files, plus 4 new i18n tests: 48/48 pass, and `next build`, `tsc` and ESLint are clean.
+
+### Prompt 11
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+Role: Lead UX/UI Designer & Senior Tailwind CSS Expert
+Task: Elevate the visual design and UX of the PollHub application from a basic functional MVP to a premium, production-ready SaaS interface.
+
+Context:
+The core functionality, i18n, and DDD architecture are complete and tested. Now, the application needs a massive visual upgrade. The design should look modern, trustworthy, and highly polished, using Tailwind CSS best practices.
+
+Execution Steps (Design System & Polish):
+
+Color Palette & Dark Mode:
+
+Establish a refined color system. Use sophisticated neutrals (e.g., slate or zinc) for text/backgrounds and a strong primary color (e.g., indigo, blue, or violet) for CTAs.
+
+Ensure perfect contrast and aesthetics in both Light and Dark modes. Fix any remaining background/text color clashes.
+
+Component Elevation (Cards & Buttons):
+
+Cards: Upgrade all card components (Poll list items, Results cards, AI Insights). Add soft drop shadows (shadow-sm, hover:shadow-md), subtle borders (border border-slate-200 dark:border-slate-800), and modern border-radius (rounded-xl or rounded-2xl).
+
+Buttons & Inputs: Make buttons premium with proper padding, font-weight, and interactive states (hover:bg-primary-600, active:scale-95, transition-all duration-200). Add focus rings for accessibility (focus-visible:ring-2 focus-visible:ring-offset-2).
+
+Style form inputs to look modern and clean.
+
+Typography & Spacing (Whitespace):
+
+Improve the typography hierarchy. Make titles bolder and more distinct. Use subtle grays for secondary text (e.g., dates, metadata).
+
+Increase whitespace/padding generously. Ensure the layout doesn't feel cramped, especially on mobile.
+
+Empty States & Micro-interactions:
+
+Design beautiful "Empty States" for the Poll List (when no polls exist) using Lucide React icons and helpful text.
+
+Ensure hover effects on interactive elements feel snappy but smooth.
+
+Test Safety (CRITICAL):
+
+DO NOT change any data-testid attributes, ARIA labels used for testing, or the underlying DOM structure in a way that breaks the Playwright E2E tests.
+
+Run npx playwright test (or your test command) locally after applying the styles to guarantee the UI changes haven't broken the test interactions.
+
+Git Operations:
+
+Once the design is completely upgraded and all E2E tests pass, commit the changes autonomously.
+
+Commit message: style: elevate UI/UX design, typography, and component styling
+
+Push to main.
+
+Constraint: Perform this design overhaul autonomously. Fix any failing E2E tests immediately if a styling change accidentally covers or hides a clickable element.
+```
+
+**Outcome:** Added design tokens in `globals.css` (a `primary` color alias for indigo, Geist as the sans font, dark mode that follows the system setting) and shared button, input and card classes in `src/lib/ui.ts`. Restyled every component in light and dark mode: navbar (icon-only role switch on mobile), poll cards, KPI cards, chart, table, AI insights, forms, vote options, the 404 page, and a new poll-list empty state with EN/HU text. No test IDs or test-relied ARIA labels changed, and the chart bar colors stay the same because a test checks them. 48/48 E2E tests pass, and `tsc`, ESLint and `next build` are clean.

@@ -6,6 +6,7 @@ import { useRouter } from "@/i18n/navigation";
 import { usePolls } from "@/context/PollContext";
 import CreatePollForm from "@/components/CreatePollForm";
 import PollList from "@/components/PollList";
+import { PAGE_SUBTITLE, PAGE_TITLE, SECTION_TITLE } from "@/lib/ui";
 
 export default function ManagerPage() {
   const t = useTranslations("manager");
@@ -23,25 +24,21 @@ export default function ManagerPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">{t("title")}</h1>
-        <p className="mt-1 text-sm text-slate-500">{t("subtitle")}</p>
-      </div>
+    <div className="flex flex-col gap-10 sm:gap-12">
+      <header>
+        <h1 className={PAGE_TITLE}>{t("title")}</h1>
+        <p className={PAGE_SUBTITLE}>{t("subtitle")}</p>
+      </header>
 
-      <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-900">
-          {t("createHeading")}
-        </h2>
+      <section className="flex flex-col gap-4">
+        <h2 className={SECTION_TITLE}>{t("createHeading")}</h2>
         <CreatePollForm />
-      </div>
+      </section>
 
-      <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-900">
-          {t("allPolls")}
-        </h2>
+      <section className="flex flex-col gap-4">
+        <h2 className={SECTION_TITLE}>{t("allPolls")}</h2>
         <PollList />
-      </div>
+      </section>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Poll, Question } from "@/types";
 import { usePolls } from "@/context/PollContext";
+import { BUTTON_PRIMARY } from "@/lib/ui";
 import { CheckCircle2, Lock, Send } from "lucide-react";
 
 interface VoteFormProps {
@@ -31,9 +32,9 @@ export default function VoteForm({ poll, question }: VoteFormProps) {
     return (
       <div
         data-testid="vote-closed"
-        className="flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-medium text-slate-600"
+        className="flex items-center gap-3 rounded-xl bg-slate-100 px-4 py-3.5 text-sm font-medium text-slate-600 ring-1 ring-slate-200 ring-inset dark:bg-slate-800/60 dark:text-slate-300 dark:ring-slate-700"
       >
-        <Lock className="h-4 w-4" />
+        <Lock aria-hidden="true" className="h-4 w-4 shrink-0" />
         {t("closed")}
       </div>
     );
@@ -43,9 +44,9 @@ export default function VoteForm({ poll, question }: VoteFormProps) {
     return (
       <div
         data-testid="vote-confirmation"
-        className="flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-3 text-sm font-medium text-indigo-700"
+        className="flex items-center gap-3 rounded-xl bg-primary-50 px-4 py-3.5 text-sm font-medium text-primary-800 ring-1 ring-primary-600/15 ring-inset dark:bg-primary-500/10 dark:text-primary-200 dark:ring-primary-400/25"
       >
-        <CheckCircle2 className="h-4 w-4" />
+        <CheckCircle2 aria-hidden="true" className="h-4 w-4 shrink-0" />
         <span>
           {justVoted && `${t("thanks")} `}
           {t("alreadyVoted")}
@@ -55,16 +56,18 @@ export default function VoteForm({ poll, question }: VoteFormProps) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-sm font-medium text-slate-700">{question.text}</p>
-      <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-5">
+      <p className="text-base font-medium text-slate-700 dark:text-slate-200">
+        {question.text}
+      </p>
+      <div className="flex flex-col gap-2.5">
         {question.options.map((option) => (
           <label
             key={option.id}
-            className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition ${
+            className={`flex cursor-pointer items-center gap-3.5 rounded-xl border px-4 py-3.5 text-sm font-medium transition-all duration-200 focus-within:ring-2 focus-within:ring-primary-500/40 active:scale-[0.99] ${
               selectedOptionId === option.id
-                ? "border-indigo-400 bg-indigo-50 text-indigo-900"
-                : "border-slate-200 hover:border-slate-300"
+                ? "border-primary-500 bg-primary-50 text-primary-900 shadow-sm dark:border-primary-400 dark:bg-primary-500/10 dark:text-primary-100"
+                : "border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800/60"
             }`}
           >
             <input
@@ -73,7 +76,7 @@ export default function VoteForm({ poll, question }: VoteFormProps) {
               value={option.id}
               checked={selectedOptionId === option.id}
               onChange={() => setSelectedOptionId(option.id)}
-              className="h-4 w-4 accent-indigo-600"
+              className="h-4 w-4 shrink-0 accent-primary-600 outline-none"
             />
             {option.text}
           </label>
@@ -85,9 +88,9 @@ export default function VoteForm({ poll, question }: VoteFormProps) {
         onClick={handleSubmit}
         disabled={!selectedOptionId}
         data-testid="submit-vote"
-        className="flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+        className={`${BUTTON_PRIMARY} w-full py-3 sm:w-auto sm:self-start`}
       >
-        <Send className="h-4 w-4" />
+        <Send aria-hidden="true" className="h-4 w-4" />
         {t("submit")}
       </button>
     </div>

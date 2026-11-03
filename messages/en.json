@@ -27,6 +27,8 @@
   },
   "pollList": {
     "empty": "No polls yet.",
+    "emptyHint": "There is nothing to vote on right now. Check back soon, new polls will show up here as soon as they are published.",
+    "emptyManagerHint": "Create your first poll with the form above, and it will appear here right away.",
     "voted": "Voted",
     "stats": "{votes, plural, one {# vote} other {# votes}} · {options, plural, one {# option} other {# options}}"
   },

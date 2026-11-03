@@ -14,6 +14,7 @@ import {
   usePlotArea,
 } from "recharts";
 import { useTranslations } from "next-intl";
+import { BarChart3 } from "lucide-react";
 import { PollResult } from "@/types";
 import { toPercent } from "@/lib/format";
 import { getLeaders, rankResults } from "@/lib/results";
@@ -38,10 +39,10 @@ function ChartTooltip({ active, payload }: TooltipContentProps) {
   if (!active || !row) return null;
   const { name, count, share } = row;
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-md">
-      <p className="font-semibold text-slate-900">{share}%</p>
-      <p className="text-slate-600">{name}</p>
-      <p className="text-slate-500">{t("votes", { count })}</p>
+    <div className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-800">
+      <p className="text-sm font-bold text-slate-900 tabular-nums dark:text-white">{share}%</p>
+      <p className="mt-0.5 font-medium text-slate-700 dark:text-slate-200">{name}</p>
+      <p className="text-slate-500 dark:text-slate-400">{t("votes", { count })}</p>
     </div>
   );
 }
@@ -67,7 +68,9 @@ function OptionNameLabel({
       width={plotArea?.width}
       maxLines={1}
       fontSize={13}
+      fontWeight={500}
       fill="#0f172a"
+      className="chart-option-label"
     >
       {String(value)}
     </Text>
@@ -84,8 +87,11 @@ export default function ResultsChart({ results, totalVotes }: ResultsChartProps)
 
   if (totalVotes === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-        {t("noVotes")}
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 px-6 py-10 text-center dark:border-slate-700">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+          <BarChart3 aria-hidden="true" className="h-5 w-5" />
+        </span>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t("noVotes")}</p>
       </div>
     );
   }
@@ -116,11 +122,11 @@ export default function ResultsChart({ results, totalVotes }: ResultsChartProps)
           <YAxis type="category" dataKey="optionId" hide />
           <Tooltip
             content={(props) => <ChartTooltip {...props} />}
-            cursor={{ fill: "rgba(42,120,214,0.06)" }}
+            cursor={{ fill: "rgba(42,120,214,0.08)" }}
           />
           <Bar
             dataKey="share"
-            radius={[0, 4, 4, 0]}
+            radius={[0, 6, 6, 0]}
             shape={(props) => (
               <Rectangle
                 {...props}
@@ -136,6 +142,7 @@ export default function ResultsChart({ results, totalVotes }: ResultsChartProps)
               fontSize={13}
               fontWeight={600}
               fill="#334155"
+              className="chart-value-label"
             />
           </Bar>
         </BarChart>

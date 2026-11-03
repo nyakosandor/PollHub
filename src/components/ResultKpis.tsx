@@ -25,16 +25,20 @@ function KpiCard({ testId, label, icon: Icon, value, detail }: KpiCardProps) {
       role="group"
       aria-label={label}
       data-testid={testId}
-      className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow duration-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-slate-500">{label}</span>
-        <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-400" />
+        <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
+          {label}
+        </span>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400">
+          <Icon aria-hidden="true" className="h-4 w-4" />
+        </span>
       </div>
-      <div className="text-xl font-semibold break-words text-slate-900">
+      <div className="text-2xl font-bold tracking-tight break-words text-slate-900 tabular-nums dark:text-white">
         {value}
       </div>
-      <p className="text-xs text-slate-500">{detail}</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400">{detail}</p>
     </div>
   );
 }
@@ -81,7 +85,7 @@ export default function ResultKpis({ poll, results, totalVotes }: ResultKpisProp
   };
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <KpiCard
         testId="kpi-total-votes"
         label={t("totalVotes")}

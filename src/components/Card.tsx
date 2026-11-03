@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { CARD, SECTION_TITLE } from "@/lib/ui";
 
 interface CardProps {
   title?: string;
@@ -8,12 +9,10 @@ interface CardProps {
 
 export default function Card({ title, action, children }: CardProps) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
+    <section className={`${CARD} p-6 sm:p-8`}>
       {(title || action) && (
-        <div className="mb-3 flex items-center justify-between">
-          {title && (
-            <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-          )}
+        <div className="mb-5 flex items-center justify-between gap-3">
+          {title && <h2 className={SECTION_TITLE}>{title}</h2>}
           {action}
         </div>
       )}

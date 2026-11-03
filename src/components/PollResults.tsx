@@ -21,11 +21,13 @@ export default function PollResults({ poll, question }: PollResultsProps) {
   const totalVotes = getTotalVotes(question.id);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <ResultKpis poll={poll} results={results} totalVotes={totalVotes} />
 
       <Card title={t("title")}>
-        <p className="mb-4 text-sm text-slate-600">{question.text}</p>
+        <p className="-mt-2 mb-6 text-sm text-slate-500 dark:text-slate-400">
+          {question.text}
+        </p>
         <ResultsChart results={results} totalVotes={totalVotes} />
         {totalVotes > 0 && (
           <ResultsTable results={results} totalVotes={totalVotes} />
