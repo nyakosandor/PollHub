@@ -1,31 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Poll, Question } from "@/types";
-import { usePolls } from "@/context/PollContext";
+import { castVote, VoteError } from "@/actions/vote";
+import { useIsClosed } from "@/lib/clock";
 import { BUTTON_PRIMARY } from "@/lib/ui";
-import { CheckCircle2, Lock, Send } from "lucide-react";
+import { AlertCircle, CheckCircle2, Lock, Send } from "lucide-react";
 
 interface VoteFormProps {
   poll: Poll;
   question: Question;
+  /** From the server: whether the signed-in user has voted already. */
+  hasVoted: boolean;
 }
 
-export default function VoteForm({ poll, question }: VoteFormProps) {
+export default function VoteForm({ poll, question, hasVoted }: VoteFormProps) {
   const t = useTranslations("vote");
-  const { castVote, hasVoted, isPollClosed } = usePolls();
+  const isClosed = useIsClosed(poll.closesAt);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [justVoted, setJustVoted] = useState(false);
-
-  const isVoted = hasVoted(poll.id);
-  const isClosed = isPollClosed(poll);
-  const canVote = !isVoted && !isClosed;
+  const [error, setError] = useState<VoteError | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const handleSubmit = () => {
-    if (!selectedOptionId || !canVote) return;
-    castVote(question.id, selectedOptionId);
-    setJustVoted(true);
+    if (!selectedOptionId || isClosed || hasVoted) return;
+    setError(null);
+    startTransition(async () => {
+      // The server re-checks every rule and refreshes the page data.
+      const result = await castVote(poll.id, selectedOptionId);
+      if (result.ok) {
+        setJustVoted(true);
+      } else {
+        setError(result.error);
+      }
+    });
   };
 
   if (isClosed) {
@@ -40,7 +49,7 @@ export default function VoteForm({ poll, question }: VoteFormProps) {
     );
   }
 
-  if (isVoted) {
+  if (hasVoted) {
     return (
       <div
         data-testid="vote-confirmation"
@@ -76,6 +85,7 @@ export default function VoteForm({ poll, question }: VoteFormProps) {
               value={option.id}
               checked={selectedOptionId === option.id}
               onChange={() => setSelectedOptionId(option.id)}
+              disabled={isPending}
               className="h-4 w-4 shrink-0 accent-primary-600 outline-none"
             />
             {option.text}
@@ -83,10 +93,22 @@ export default function VoteForm({ poll, question }: VoteFormProps) {
         ))}
       </div>
 
+      {error && (
+        <p
+          role="alert"
+          data-testid="vote-error"
+          data-error={error}
+          className="flex items-center gap-2 text-sm font-medium text-red-700 dark:text-red-300"
+        >
+          <AlertCircle aria-hidden="true" className="h-4 w-4 shrink-0" />
+          {t(`errors.${error}`)}
+        </p>
+      )}
+
       <button
         type="button"
         onClick={handleSubmit}
-        disabled={!selectedOptionId}
+        disabled={!selectedOptionId || isPending}
         data-testid="submit-vote"
         className={`${BUTTON_PRIMARY} w-full py-3 sm:w-auto sm:self-start`}
       >

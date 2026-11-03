@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { CHANGE_EVENT, STORAGE_KEY, ThemePreference } from "@/lib/theme";
 
 const isForcedTheme = (value: unknown): value is "light" | "dark" =>
@@ -39,6 +39,11 @@ export function setThemePreference(preference: ThemePreference) {
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
+/** Re-applies the saved choice, e.g. after React re-created <html>. */
+export function applyStoredTheme() {
+  applyToDocument(readPreference());
+}
+
 function subscribe(onChange: () => void) {
   const onStorage = (event: StorageEvent) => {
     // Another tab changed the theme: mirror it here.
@@ -54,19 +59,9 @@ function subscribe(onChange: () => void) {
 
 /** The saved theme choice; "system" during server rendering. */
 export function useThemePreference(): ThemePreference {
-  const preference = useSyncExternalStore<ThemePreference>(
+  return useSyncExternalStore<ThemePreference>(
     subscribe,
     readPreference,
     () => "system"
   );
-
-  // React re-creates <html> when it renders the root layout on the client
-  // (e.g. the not-found page), dropping the attribute the head script set.
-  // Reads storage directly so the "system" server snapshot used during
-  // hydration never clears a saved theme for a frame.
-  useEffect(() => {
-    applyToDocument(readPreference());
-  });
-
-  return preference;
 }

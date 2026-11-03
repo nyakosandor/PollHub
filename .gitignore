@@ -49,3 +49,12 @@ next-env.d.ts
 # playwright test runner output
 /test-results/
 /playwright-report/
+
+/src/generated/prisma
+
+# Local env stays private; the example is committed.
+!.env.example
+
+# SQLite databases
+*.db
+*.db-journal

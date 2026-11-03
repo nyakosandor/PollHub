@@ -6,10 +6,9 @@
   "nav": {
     "home": "PollHub kezdőlap",
     "managerDashboard": "Menedzser irányítópult",
-    "roleSwitcher": "Aktív szerepkör",
     "roles": {
-      "Participant": "Résztvevő",
-      "Manager": "Menedzser"
+      "MANAGER": "Menedzser",
+      "PARTICIPANT": "Résztvevő"
     },
     "language": "Nyelv",
     "languages": {
@@ -21,11 +20,55 @@
       "system": "Rendszertéma",
       "light": "Világos téma",
       "dark": "Sötét téma"
+    },
+    "login": "Bejelentkezés",
+    "register": "Regisztráció",
+    "logout": "Kijelentkezés"
+  },
+  "auth": {
+    "loginTitle": "Üdv újra!",
+    "loginSubtitle": "Jelentkezz be a szavazáshoz és az eredmények megtekintéséhez.",
+    "registerTitle": "Fiók létrehozása",
+    "registerSubtitle": "Csatlakozz a PollHubhoz résztvevőként vagy menedzserként.",
+    "email": "E-mail-cím",
+    "emailPlaceholder": "te@pelda.hu",
+    "password": "Jelszó",
+    "passwordHint": "Legalább {min} karakter.",
+    "confirmPassword": "Jelszó megerősítése",
+    "role": "Fiók típusa",
+    "roles": {
+      "PARTICIPANT": {
+        "title": "Résztvevő",
+        "description": "Szavaz és látja az eredményeket."
+      },
+      "MANAGER": {
+        "title": "Menedzser",
+        "description": "Szavazásokat hoz létre és zár le."
+      }
+    },
+    "loginSubmit": "Bejelentkezés",
+    "registerSubmit": "Fiók létrehozása",
+    "noAccount": "Még nincs fiókod?",
+    "registerLink": "Regisztrálj",
+    "haveAccount": "Már van fiókod?",
+    "loginLink": "Jelentkezz be",
+    "demoAccounts": "Demó fiókok",
+    "errors": {
+      "invalidCredentials": "Hibás e-mail-cím vagy jelszó.",
+      "emailInvalid": "Adj meg egy érvényes e-mail-címet.",
+      "passwordTooShort": "A jelszónak legalább 8 karakter hosszúnak kell lennie.",
+      "passwordMismatch": "A két jelszó nem egyezik.",
+      "roleInvalid": "Válassz fióktípust.",
+      "emailTaken": "Ezzel az e-mail-címmel már létezik fiók.",
+      "signInFailed": "A fiók létrejött, de a bejelentkezés nem sikerült. Kérjük, jelentkezz be."
     }
   },
   "dashboard": {
     "title": "Szavazások",
-    "subtitle": "Böngészd a szavazásokat és add le a szavazatod, vagy válts Menedzser módra szavazások létrehozásához és kezeléséhez."
+    "subtitle": {
+      "PARTICIPANT": "Böngészd a szavazásokat, és add le a szavazatod.",
+      "MANAGER": "Böngészd a szavazásokat és az eredményeiket. Szavazást a Menedzser irányítópulton hozhatsz létre és zárhatsz le."
+    }
   },
   "status": {
     "open": "Nyitott",
@@ -61,7 +104,10 @@
       "questionRequired": "Add meg a szavazás kérdését.",
       "optionsRequired": "Adj meg legalább két válaszlehetőséget.",
       "closingTimeRequired": "Válassz lezárási időt.",
-      "closingTimeInPast": "A lezárási időnek a jövőben kell lennie."
+      "closingTimeInPast": "A lezárási időnek a jövőben kell lennie.",
+      "textTooLong": "A szövegek legfeljebb 200 karakter hosszúak lehetnek.",
+      "forbidden": "Szavazást csak menedzser hozhat létre vagy zárhat le.",
+      "notFound": "Ez a szavazás már nem létezik."
     }
   },
   "poll": {
@@ -75,7 +121,13 @@
     "closed": "Ez a szavazás lezárult. Szavazni már nem lehet.",
     "thanks": "Köszönjük a szavazatod!",
     "alreadyVoted": "Már szavaztál — az eredményeket lent láthatod.",
-    "submit": "Szavazat leadása"
+    "submit": "Szavazat leadása",
+    "errors": {
+      "forbidden": "Szavazni csak résztvevőként lehet.",
+      "notFound": "Ez a szavazás vagy opció már nem létezik.",
+      "pollClosed": "A szavazás lezárult, ezért a szavazatod nem került rögzítésre.",
+      "alreadyVoted": "Erre a szavazásra már leadtad a szavazatod."
+    }
   },
   "results": {
     "title": "Eredmények",

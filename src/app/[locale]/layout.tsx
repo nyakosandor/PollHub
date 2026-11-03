@@ -5,9 +5,10 @@ import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import "../globals.css";
 import { routing } from "@/i18n/routing";
-import { PollProvider } from "@/context/PollContext";
 import Navbar from "@/components/Navbar";
-import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import ThemeScript from "@/components/ThemeScript";
+import { getCurrentUser, getRequestTime } from "@/lib/dal";
+import { ServerNowProvider } from "@/lib/clock";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,8 +44,12 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) {
     notFound();
   }
-  // Lets the pages below render statically for each locale.
   setRequestLocale(locale);
+  // Reading the session makes every page render per request, as it must:
+  // what a page shows depends on who is signed in.
+  const user = await getCurrentUser();
+  // The render time, so time-dependent UI hydrates without a mismatch.
+  const renderedAt = getRequestTime();
 
   return (
     // The theme script below may add data-theme before hydration.
@@ -54,18 +59,16 @@ export default async function LocaleLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        {/* Inline so it runs while the HTML is parsed, before the first paint.
-            next/script's beforeInteractive only queues it for the Next runtime. */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <ThemeScript />
       </head>
       <body className="flex min-h-full flex-col bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <NextIntlClientProvider>
-          <PollProvider>
-            <Navbar />
-            <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+          <ServerNowProvider now={renderedAt}>
+            <Navbar user={user} />
+            <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
               {children}
             </main>
-          </PollProvider>
+          </ServerNowProvider>
         </NextIntlClientProvider>
       </body>
     </html>

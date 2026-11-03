@@ -1,0 +1,79 @@
+// PollHub relational domain model.
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  // CommonJS output also loads in Playwright, which runs the tests as CJS.
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  MANAGER
+  PARTICIPANT
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  /// bcrypt hash, never the plain password.
+  password  String
+  role      Role     @default(PARTICIPANT)
+  createdAt DateTime @default(now())
+  votes     Vote[]
+}
+
+/// Aggregate root: a poll is open until `closesAt`; there is no stored status.
+model Poll {
+  id        String     @id @default(cuid())
+  title     String
+  closesAt  DateTime
+  createdAt DateTime   @default(now())
+  questions Question[]
+  votes     Vote[]
+}
+
+/// Kept separate from Poll so a poll can hold several questions later.
+model Question {
+  id      String   @id @default(cuid())
+  text    String
+  pollId  String
+  poll    Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  options Option[]
+  votes   Vote[]
+
+  @@index([pollId])
+}
+
+model Option {
+  id         String   @id @default(cuid())
+  text       String
+  /// Display order within the question.
+  position   Int
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  votes      Vote[]
+
+  @@index([questionId])
+}
+
+model Vote {
+  id         String   @id @default(cuid())
+  userId     String
+  pollId     String
+  questionId String
+  optionId   String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  poll       Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  option     Option   @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  /// One vote per user per question, enforced by the database itself.
+  @@unique([userId, questionId])
+  @@index([questionId])
+}

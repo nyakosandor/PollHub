@@ -1,4 +1,16 @@
-export type UserRole = "Participant" | "Manager";
+/**
+ * Data transfer objects passed from the server to the UI. Dates travel as
+ * Unix timestamps in milliseconds so they serialize across the
+ * Server → Client Component boundary.
+ */
+
+export type UserRole = "MANAGER" | "PARTICIPANT";
+
+export interface CurrentUser {
+  id: string;
+  email: string;
+  role: UserRole;
+}
 
 export interface Option {
   id: string;
@@ -20,12 +32,27 @@ export interface Question {
   options: Option[];
 }
 
-export interface Vote {
-  id: string;
-  pollId: string;
-  questionId: string;
-  optionId: string;
-  userId: string;
+export interface PollResult {
+  option: Option;
+  count: number;
+}
+
+/** One row of the poll list. */
+export interface PollSummary {
+  poll: Poll;
+  optionCount: number;
+  totalVotes: number;
+  /** Whether the signed-in user has voted on this poll. */
+  hasVoted: boolean;
+}
+
+/** Everything the poll page shows. */
+export interface PollDetail {
+  poll: Poll;
+  question: Question;
+  results: PollResult[];
+  totalVotes: number;
+  hasVoted: boolean;
 }
 
 export interface NewPoll {
@@ -33,9 +60,4 @@ export interface NewPoll {
   questionText: string;
   optionTexts: string[];
   closesAt: number;
-}
-
-export interface PollResult {
-  option: Option;
-  count: number;
 }

@@ -1,8 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Poll, Question } from "@/types";
-import { usePolls } from "@/context/PollContext";
+import { Poll, PollResult, Question } from "@/types";
 import AIInsights from "@/components/AIInsights";
 import Card from "@/components/Card";
 import ResultKpis from "@/components/ResultKpis";
@@ -12,13 +11,12 @@ import ResultsTable from "@/components/ResultsTable";
 interface PollResultsProps {
   poll: Poll;
   question: Question;
+  results: PollResult[];
+  totalVotes: number;
 }
 
-export default function PollResults({ poll, question }: PollResultsProps) {
+export default function PollResults({ poll, question, results, totalVotes }: PollResultsProps) {
   const t = useTranslations("results");
-  const { getResults, getTotalVotes } = usePolls();
-  const results = getResults(question.id);
-  const totalVotes = getTotalVotes(question.id);
 
   return (
     <div className="flex flex-col gap-6">

@@ -3,11 +3,9 @@
 import { useFormatter, useTranslations } from "next-intl";
 import { Clock, Lock, LucideIcon, Trophy, Users } from "lucide-react";
 import { Poll, PollResult } from "@/types";
-import { usePolls } from "@/context/PollContext";
-import { getTimeRemaining } from "@/lib/closingTime";
+import { useIsClosed, useTimeRemaining } from "@/lib/clock";
 import { toPercent } from "@/lib/format";
 import { getLeaders } from "@/lib/results";
-import { useNow } from "@/lib/useNow";
 
 const COUNTDOWN_REFRESH_MS = 30 * 1000;
 
@@ -45,10 +43,10 @@ function KpiCard({ testId, label, icon: Icon, value, detail }: KpiCardProps) {
 
 function TimeRemainingCard({ poll }: { poll: Poll }) {
   const t = useTranslations("kpi");
-  const { isPollClosed } = usePolls();
-  const now = useNow(COUNTDOWN_REFRESH_MS);
+  const isClosed = useIsClosed(poll.closesAt);
+  const timeRemaining = useTimeRemaining(poll.closesAt, COUNTDOWN_REFRESH_MS);
 
-  return isPollClosed(poll) ? (
+  return isClosed ? (
     <KpiCard
       testId="kpi-time-remaining"
       label={t("timeRemaining")}
@@ -61,7 +59,7 @@ function TimeRemainingCard({ poll }: { poll: Poll }) {
       testId="kpi-time-remaining"
       label={t("timeRemaining")}
       icon={Clock}
-      value={t("closesIn", getTimeRemaining(poll.closesAt, now))}
+      value={t("closesIn", timeRemaining)}
       detail={t("votingOpen")}
     />
   );

@@ -1,20 +1,14 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useTransition, FormEvent } from "react";
 import { useTranslations } from "next-intl";
-import { usePolls } from "@/context/PollContext";
-import { NewPoll } from "@/types";
-import {
-  defaultClosingTime,
-  isClosed,
-  toDateTimeInputValue,
-} from "@/lib/closingTime";
-import { createId } from "@/lib/ids";
+import { createPoll, PollActionError } from "@/actions/poll";
+import { defaultClosingTime, toDateTimeInputValue } from "@/lib/closingTime";
 import { useTimeout } from "@/lib/useTimeout";
+import { MIN_POLL_OPTIONS, normalizeNewPoll, validatePoll } from "@/lib/validation";
 import { BUTTON_GHOST, BUTTON_PRIMARY, CARD, ICON_BUTTON, INPUT, LABEL } from "@/lib/ui";
 import { AlertCircle, CheckCircle2, Plus, PlusCircle, Trash2 } from "lucide-react";
 
-const MIN_OPTIONS = 2;
 const SUCCESS_MESSAGE_MS = 2500;
 
 interface DraftOption {
@@ -22,47 +16,22 @@ interface DraftOption {
   text: string;
 }
 
-const createDraftOption = (): DraftOption => ({ id: createId("draft"), text: "" });
+const createDraftOption = (): DraftOption => ({ id: crypto.randomUUID(), text: "" });
 const createEmptyDraftOptions = () =>
-  Array.from({ length: MIN_OPTIONS }, createDraftOption);
+  Array.from({ length: MIN_POLL_OPTIONS }, createDraftOption);
 
 const createDefaultClosingInput = () =>
   toDateTimeInputValue(defaultClosingTime(Date.now()));
 
-type ValidationError =
-  | "titleRequired"
-  | "questionRequired"
-  | "optionsRequired"
-  | "closingTimeRequired"
-  | "closingTimeInPast";
-
-function validatePoll({
-  title,
-  questionText,
-  optionTexts,
-  closesAt,
-}: NewPoll): ValidationError | null {
-  if (!title) return "titleRequired";
-  if (!questionText) return "questionRequired";
-  if (optionTexts.length < MIN_OPTIONS) {
-    return "optionsRequired";
-  }
-  if (Number.isNaN(closesAt)) return "closingTimeRequired";
-  if (isClosed(closesAt, Date.now())) {
-    return "closingTimeInPast";
-  }
-  return null;
-}
-
 export default function CreatePollForm() {
   const t = useTranslations("form");
-  const { createPoll } = usePolls();
   const scheduleTimeout = useTimeout();
   const [title, setTitle] = useState("");
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<DraftOption[]>(createEmptyDraftOptions);
   const [closingInput, setClosingInput] = useState(createDefaultClosingInput);
-  const [error, setError] = useState<ValidationError | null>(null);
+  const [error, setError] = useState<PollActionError | null>(null);
+  const [isPending, startTransition] = useTransition();
   const [showSuccess, setShowSuccess] = useState(false);
 
   const updateOption = (id: string, text: string) => {
@@ -88,21 +57,29 @@ export default function CreatePollForm() {
     e.preventDefault();
     setShowSuccess(false);
 
-    const newPoll: NewPoll = {
-      title: title.trim(),
-      questionText: question.trim(),
-      optionTexts: options.map((option) => option.text.trim()).filter(Boolean),
+    const newPoll = normalizeNewPoll({
+      title,
+      questionText: question,
+      optionTexts: options.map((option) => option.text),
+      // The input holds local time, so the browser converts it to UTC.
       closesAt: new Date(closingInput).getTime(),
-    };
+    });
 
-    const validationError = validatePoll(newPoll);
+    // Instant feedback here; the Server Action validates again.
+    const validationError = validatePoll(newPoll, Date.now());
     setError(validationError);
     if (validationError) return;
 
-    createPoll(newPoll);
-    resetForm();
-    setShowSuccess(true);
-    scheduleTimeout(() => setShowSuccess(false), SUCCESS_MESSAGE_MS);
+    startTransition(async () => {
+      const result = await createPoll(newPoll);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      resetForm();
+      setShowSuccess(true);
+      scheduleTimeout(() => setShowSuccess(false), SUCCESS_MESSAGE_MS);
+    });
   };
 
   return (
@@ -156,7 +133,7 @@ export default function CreatePollForm() {
                 placeholder={t("optionPlaceholder", { number: index + 1 })}
                 className={INPUT}
               />
-              {options.length > MIN_OPTIONS && (
+              {options.length > MIN_POLL_OPTIONS && (
                 <button
                   type="button"
                   onClick={() => removeOption(option.id)}
@@ -227,6 +204,7 @@ export default function CreatePollForm() {
         <button
           type="submit"
           data-testid="create-poll-submit"
+          disabled={isPending}
           className={`${BUTTON_PRIMARY} w-full py-3 sm:ml-auto sm:w-auto`}
         >
           <Plus aria-hidden="true" className="h-4 w-4" />

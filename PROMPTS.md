@@ -565,3 +565,95 @@ Add, commit (docs: create step-by-step demo walkthrough script), and push the fi
 ```
 
 **Outcome:** Dry-ran the full demo flow with the Playwright MCP on the dev server, then wrote `DEMO_FORGATOKONYV.md` in Hungarian: steps 0–5 plus a closing section, checkboxes, the exact on-screen labels, a script for what to say, a troubleshooting table, and a practice checklist. Adjustments to match the real app: after voting, the form is replaced by the confirmation (there is no disabled form to retry); results are on the poll page, not a separate view; the seeded "Onboarding feedback" poll is used for a richer chart and AI text; the auto-close timer is offered as an option. Found while checking: `/` redirects to the remembered locale, so the script opens `/hu`. After a full reload, the list briefly shows only the seed polls until localStorage loads; this is noted as a presenter tip and is an MVP limitation. Committed and pushed only the script and this log; the Prompt 13 theme-script fix is still uncommitted.
+
+### Prompt 17
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+ole: Lead Full-Stack Next.js Architect
+Task: Replace the mock localStorage MVP with a production-ready Relational Database (Prisma + SQLite) AND implement a real Authentication system (NextAuth + Registration/Login UI).
+
+Context:
+We are upgrading the frontend-only MVP to a full-stack application. We need a real SQLite database for local evaluation, and a real credential-based authentication system with separate user accounts, completely removing the old mock role toggle.
+
+Execution Steps (Follow Strictly):
+
+Install Dependencies:
+
+Install prisma (dev dependency), @prisma/client, next-auth, bcryptjs, and @types/bcryptjs.
+
+Initialize Prisma with SQLite: npx prisma init --datasource-provider sqlite.
+
+Database Schema (Prisma):
+
+In prisma/schema.prisma, design the relational DDD model:
+
+User: id, email (unique), password (hashed), role ("MANAGER" | "PARTICIPANT").
+
+Poll: id, title, closesAt (DateTime).
+
+Question: id, text, pollId, options.
+
+Option: id, text, questionId, votes.
+
+Vote: id, userId, pollId, questionId, optionId.
+
+Run npx prisma db push to generate the SQLite database file (dev.db).
+
+Authentication (NextAuth.js):
+
+Set up app/api/auth/[...nextauth]/route.ts using the Credentials provider.
+
+The provider must verify the email and password (using bcryptjs.compare) against the Prisma User table.
+
+Extend the NextAuth session and JWT callbacks to include the user's id and role.
+
+UI & Route Guards (Login & Registration):
+
+Delete the old role toggle from the Navbar. Replace it with the logged-in user's email, their role badge, and a "Logout" button.
+
+Create fully styled and localized (EN/HU) pages for /register (allowing role selection) and /login.
+
+Implement a Next.js Middleware or layout-level checks to protect all poll-related routes. Unauthenticated users must be redirected to /login.
+
+Server Actions (Data Mutation):
+
+Delete lib/storage.ts entirely.
+
+Create Next.js Server Actions (e.g., actions/poll.ts, actions/vote.ts, actions/auth.ts) to handle DB queries using the Prisma client.
+
+Ensure business rules (checking closesAt, preventing duplicate votes per user/question) are enforced securely on the server side using DB queries.
+
+Refactor E2E Tests (CRITICAL):
+
+The 20+ Playwright tests will break because the auth flow and data layer changed.
+
+Refactor the tests: add a setup step that registers/logs in a test user via the UI or API before testing poll creation and voting.
+
+Add database cleanup logic (e.g., prisma.user.deleteMany()) between tests to ensure a clean state.
+
+Ensure all tests pass 100% against the real SQLite database.
+
+Git & Docs:
+
+Update README.md (add npx prisma db push to the run instructions).
+
+Commit message: feat: implement full-stack architecture with Prisma SQLite, NextAuth, and Registration UI
+
+Push to main.
+
+Constraint: This is a massive architectural shift. Work methodically. Fix any E2E tests that break during the migration. Do not ask for permission if the build is clean and tests are green.
+```
+
+**Outcome:** Replaced the localStorage MVP with Prisma 7 + SQLite and NextAuth 4 credentials auth.
+
+- **Database:** Prisma 7.10 (pinned; `latest` is an 8.0 release candidate) with the `better-sqlite3` driver adapter and a `prisma.config.ts`. Schema: `User` (unique email, bcrypt hash, `Role` enum), `Poll`, `Question`, `Option` (with `position`), `Vote` with a `(userId, questionId)` unique index and cascading deletes. `npx prisma db push` creates `dev.db`; `npx prisma db seed` loads demo users (manager/participant), the two polls and four votes. The generated client is git-ignored and built by `postinstall`/`build`; it uses `moduleFormat = "cjs"` so the Playwright tests can import it.
+- **Auth:** `app/api/auth/[...nextauth]/route.ts` with the Credentials provider (`bcrypt.compare` against the `User` table, and a dummy hash for unknown emails so the response time doesn't reveal accounts). JWT and session callbacks carry `id` and `role`.
+- **Route protection:** an optimistic cookie check in `src/proxy.ts` (combined with next-intl) redirects visitors to `/{locale}/login?callbackUrl=…`. Pages then verify the user again through a Data Access Layer (`src/lib/dal.ts`), which re-reads the user from the DB. `/manager` is manager-only.
+- **Server Actions:** `actions/auth.ts` (register), `actions/poll.ts` (create, close) and `actions/vote.ts` (vote). Each checks the role on the server; voting checks `closesAt` at submit time and relies on the unique index for duplicates. Shared validation runs in the browser and on the server.
+- **Removed:** `lib/storage.ts`, `mockData`, `PollContext`, `useNow`, `ids` and the Navbar role toggle.
+- **UI:** the Navbar shows the user's email, a role badge and Logout. New localized (EN/HU) login and register pages; registration has a role choice and signs the new user in right away. Pages are now server components that pass DTOs to client components. Time-dependent UI uses `useSyncExternalStore` hooks seeded with the server render time, so there are no hydration mismatches.
+- **E2E:** the tests use a separate `e2e.db`, recreated by the web server command with `prisma db push`. The DB is reset to the seed before every test (one worker), and users sign in through the NextAuth API. localStorage assertions became Prisma queries. New tests cover the auth flows, registration validation, a duplicate vote from a stale tab, and a vote after the poll closed.
+- **Results:** tsc, ESLint and `next build` are clean; 82/82 E2E tests pass in both locales. A second run showed one intermittent failure: a test submitted the register form before hydration, which triggered a native GET submit (password in the URL). Fixed in the app: the auth forms use `method="post"` and keep the submit button disabled until hydration. The full suite then passed 82/82 again.
+- **Docs and commit:** README (Hungarian) updated with the new architecture, the `.env` setup, `npx prisma db push`/`db seed` and the demo accounts. Committed together with the pending Prompt 13 theme-script fix and pushed to main.

@@ -1,43 +1,26 @@
-"use client";
-
-import { use } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
-import { usePolls } from "@/context/PollContext";
-import { formatClosingTime } from "@/lib/closingTime";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "@/i18n/navigation";
+import { Locale } from "@/i18n/routing";
 import Card from "@/components/Card";
-import StatusBadge from "@/components/StatusBadge";
-import ClosePollButton from "@/components/ClosePollButton";
-import VoteForm from "@/components/VoteForm";
+import PollHeader from "@/components/PollHeader";
 import PollResults from "@/components/PollResults";
+import VoteForm from "@/components/VoteForm";
+import { getPollDetail, requireUser } from "@/lib/dal";
 import { LINK_SUBTLE } from "@/lib/ui";
-import { ArrowLeft, CalendarClock } from "lucide-react";
 
-export default function PollDetailPage({
-  params,
-}: {
-  params: Promise<{ locale: string; id: string }>;
-}) {
-  const { id } = use(params);
-  const t = useTranslations("poll");
-  const locale = useLocale();
-  const { getPoll, getPollQuestion, isPollClosed, role, isHydrated } = usePolls();
+export default async function PollDetailPage({ params }: PageProps<"/[locale]/polls/[id]">) {
+  const { locale, id } = await params;
+  setRequestLocale(locale as Locale);
+  const user = await requireUser();
+  const [t, detail] = await Promise.all([
+    getTranslations({ locale: locale as Locale, namespace: "poll" }),
+    getPollDetail(id, user.id),
+  ]);
+  if (!detail) notFound();
 
-  // Polls created in the browser only exist after localStorage hydration,
-  // so wait for it before deciding the poll is missing.
-  if (!isHydrated) {
-    return null;
-  }
-
-  const poll = getPoll(id);
-  const question = getPollQuestion(id);
-
-  if (!poll || !question) {
-    notFound();
-  }
-
-  const isClosed = isPollClosed(poll);
+  const { poll, question, results, totalVotes, hasVoted } = detail;
 
   return (
     <div className="flex flex-col gap-6">
@@ -49,34 +32,16 @@ export default function PollDetailPage({
         {t("back")}
       </Link>
 
-      <Card>
-        <div className="mb-4">
-          <StatusBadge isClosed={isClosed} />
-        </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-          {poll.title}
-        </h1>
-        <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
-          <CalendarClock aria-hidden="true" className="h-4 w-4" />
-          {t("closingTime", {
-            isClosed: String(isClosed),
-            date: formatClosingTime(poll.closesAt, locale),
-          })}
-        </p>
-        {role === "Manager" && (
-          <div className="mt-6 border-t border-slate-100 pt-6 dark:border-slate-800">
-            <ClosePollButton poll={poll} />
-          </div>
-        )}
-      </Card>
+      <PollHeader poll={poll} canClose={user.role === "MANAGER"} />
 
-      {role === "Participant" && (
+      {/* Managers run polls; participants vote on them. */}
+      {user.role === "PARTICIPANT" && (
         <Card title={t("castVote")}>
-          <VoteForm poll={poll} question={question} />
+          <VoteForm poll={poll} question={question} hasVoted={hasVoted} />
         </Card>
       )}
 
-      <PollResults poll={poll} question={question} />
+      <PollResults poll={poll} question={question} results={results} totalVotes={totalVotes} />
     </div>
   );
 }
