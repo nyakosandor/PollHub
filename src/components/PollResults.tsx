@@ -32,8 +32,8 @@ export default function PollResults({ poll, question, results, totalVotes }: Pol
         )}
       </Card>
 
-      {/* Remount on a new vote so the simulated analysis runs again. */}
-      <AIInsights key={totalVotes} results={results} totalVotes={totalVotes} />
+      {/* Remount on a new vote so the summary is generated for the new totals. */}
+      <AIInsights key={totalVotes} pollId={poll.id} />
     </div>
   );
 }

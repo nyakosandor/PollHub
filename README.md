@@ -1,10 +1,10 @@
 # PollHub
 
-Kérdőívek és szavazások létrehozására, kitöltésére és kiértékelésére szolgáló webalkalmazás. Next.js, React, Prisma (SQLite), NextAuth, Tailwind CSS és Recharts alapokon készült, egyetemi beadandó feladatként.
+Kérdőívek és szavazások létrehozására, kitöltésére és kiértékelésére szolgáló webalkalmazás. Next.js, React, Prisma (SQLite), NextAuth, Google Gemini API, Tailwind CSS és Recharts alapokon készült, egyetemi beadandó feladatként.
 
 ## Projekt célja
 
-A PollHub MVP (Minimum Viable Product) egy kérdőív teljes életciklusát mutatja be: a menedzser létrehozza és lezárja a kérdőívet, a résztvevő szavaz, az eredmények pedig diagramon és szimulált LLM-összefoglalóban jelennek meg.
+A PollHub MVP (Minimum Viable Product) egy kérdőív teljes életciklusát mutatja be: a menedzser létrehozza és lezárja a kérdőívet, a résztvevő szavaz, az eredmények pedig diagramon és a Google Gemini által generált összefoglalóban jelennek meg.
 
 Az alkalmazás teljes stackes: az adatok relációs adatbázisban (Prisma ORM + SQLite) tárolódnak, a felhasználók regisztrálnak és bejelentkeznek (NextAuth, Credentials provider, bcrypt jelszó-hash), az üzleti szabályokat pedig Server Actionök érvényesítik a szerveren. A korábbi `localStorage`-alapú MVP-t és a szerepkörkapcsolót ez váltotta fel.
 
@@ -22,7 +22,7 @@ Az alkalmazás teljes stackes: az adatok relációs adatbázisban (Prisma ORM + 
   - KPI-kártyák: összes szavazat, vezető opció (holtversenyt is kezelve) és hátralévő idő (például „Closes in 2 days”, illetve „Closed”).
   - Reszponzív, rangsorolt sávdiagram Recharts könyvtárral: százalékos feliratok, kiemelt vezető opció és tooltip.
   - Táblázatos nézet, amely a diagram értékeit szövegesen is elérhetővé teszi.
-- **AI Insights:** szimulált LLM-összefoglaló az összesített eredményekből.
+- **AI Insights:** valódi LLM-összefoglaló (Google Gemini) az összesített eredményekből, az aktív nyelven, betöltési és hibaállapottal (újrapróbálás gombbal).
 
 
 ## Architektúra és DDD
@@ -87,16 +87,17 @@ A szabályokat a szerver érvényesíti a Server Actionökben, adatbázis-lekér
 
 **További szabályok.** Létrehozáskor kötelező a cím, a kérdés és legalább két válaszopció, a lezárási időnek pedig a jövőben kell lennie. Ugyanez a validáció (`src/lib/validation.ts`) fut a böngészőben azonnali visszajelzésként és a szerveren is. A kézi lezárás soha nem tolja későbbre a már elmúlt lezárási időt. A jelszó legalább 8 karakter, az e-mail-cím kisbetűsítve és egyediként tárolódik.
 
-## LLM szimuláció (AI Insights)
+## AI Insights (Google Gemini)
 
-A specifikáció szerint az LLM-összefoglaló **„kizárólag összesített, fiktív válaszokból”** készülhet. Az MVP ezt valódi LLM-hívás nélkül, teljesen kliensoldalon teljesíti, így nincs szükség külső szolgáltatásra, API-kulcsra vagy hálózati kapcsolatra.
+Az eredménynézet AI-összefoglalóját a **Google Gemini API** készíti a hivatalos `@google/genai` SDK-val. A hívás kizárólag a szerveren történik, Server Actionön keresztül, így a `GEMINI_API_KEY` sosem jut el a böngészőbe.
 
-- **Csak összesített adat:** a `src/lib/insights.ts` fájl `buildInsightSummary` függvénye opciónkénti szavazatszámokat és az összes szavazat számát kapja meg. Egyedi szavazatokhoz és felhasználói azonosítókhoz nem fér hozzá.
-- **Fiktív adatok:** a minta-szavazatok kitaláltak, a felület pedig jelzi, hogy az összefoglaló szimulált, fiktív válaszokra épül.
-- **Dinamikus generálás:** a szöveg nem rögzített, hanem az aktuális eredményekből áll össze. Figyelembe veszi a vezető opciót és annak részesedését, a második helyezettől való különbséget, a holtversenyt, a szavazat nélküli állapotot és a kis mintaméretet. Azonos eredményekhez azonos szöveg tartozik.
-- **Szimulált API-késleltetés:** az eredménynézet megnyitásakor 2 másodpercig pulzáló „Generating AI insights...” töltési állapot látszik (`setTimeout`), csak utána jelenik meg a szöveg. Új szavazat után a folyamat újraindul.
-
-A logika egy önálló függvényben van, ezért később valódi LLM API-hívásra cserélhető.
+- **Folyamat:** az `AIInsights` komponens a `generatePollInsights(pollId, locale)` Server Actiont hívja (`src/actions/insights.ts`). A szerver ellenőrzi a bejelentkezést, az adatbázisból olvassa ki a kérdést és az összesített szavazatszámokat, majd a `summarizePollResults({ pollQuestion, aggregatedResults, locale })` függvény (`src/lib/gemini.ts`) elkészíti a promptot, és meghívja a `models.generateContent` végpontot.
+- **Csak összesített adat:** a modell opciónkénti szavazatszámokat és arányokat kap, egyedi szavazatokat és felhasználói adatokat nem. Mivel a böngésző csak a szavazás azonosítóját küldi, a végponton keresztül nem lehet tetszőleges promptot futtatni a kulcsunkkal.
+- **Prompt:** rövid, professzionális összefoglaló egy bekezdésben, markdown nélkül, az aktív nyelven (magyar vagy angol). A rendszerutasítás szerint a kérdés és az opciók szövege adat, nem utasítás, ami véd a promptba csempészett parancsok ellen. Az esetleges markdown-jelölést a szerver eltávolítja.
+- **Modellek:** a feladat `gemini-2.5-flash` modellt kért, de a Google ezt új API-kulcsoknak már nem szolgálja ki (404). Ezért a szerver a `gemini-3.8-flash` modellt próbálja, túlterhelés vagy hiba esetén pedig a `gemini-3.5-flash`-re vált. Modellenként egy gyors újrapróbálás és 12 másodperces időkorlát van. A `GEMINI_MODEL` környezeti változóval egyetlen modell rögzíthető.
+- **Gyorsítótár:** azonos eredményekre (szavazás, nyelv és szavazatszámok szerint) a szerver nem hívja újra az API-t; új szavazat után új összefoglaló készül.
+- **Felület:** várakozás közben pulzáló skeleton és „AI elemzés készítése...” felirat látszik, hiba esetén „Nem sikerült elkészíteni az elemzést.” üzenet és **Újrapróbálás** gomb. Szavazat nélküli kérdőívnél nincs API-hívás, helyette tájékoztató szöveg jelenik meg.
+- **Tesztmód:** `AI_INSIGHTS_MODE="mock"` esetén a szerver nem hívja a Geminit, hanem a korábbi, szabályalapú összefoglalót adja vissza (`src/lib/insights.ts`). Az E2E tesztek így futnak, üres API-kulccsal, ezért nem fogyasztanak kvótát, és determinisztikus szöveget ellenőriznek. Internet nélküli bemutatón is használható.
 
 ## Futtatás
 
@@ -108,7 +109,7 @@ Előfeltétel: Node.js 20+ és npm.
    npm install
    ```
 
-2. Környezeti változók: másold le a mintát, és adj meg egy véletlenszerű `NEXTAUTH_SECRET` értéket (a parancs a `.env.example` fájlban található):
+2. Környezeti változók: másold le a mintát, adj meg egy véletlenszerű `NEXTAUTH_SECRET` értéket (a parancs a `.env.example` fájlban található), és a `GEMINI_API_KEY` mezőbe a Google AI Studióban létrehozott kulcsot (<https://aistudio.google.com/apikey>):
 
    ```bash
    cp .env.example .env
@@ -145,4 +146,4 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-A parancs külön tesztadatbázist hoz létre (`e2e.db`, `npx prisma db push`), elkészíti a production buildet, elindítja az alkalmazást a 3100-as porton, és mindkét nyelven lefuttatja az `e2e/` mappa tesztjeit. Minden teszt előtt az adatbázis visszaáll a demóállapotra, a tesztek valódi bejelentkezéssel futnak, a fejlesztői `dev.db` pedig érintetlen marad.
+A parancs külön tesztadatbázist hoz létre (`e2e.db`, `npx prisma db push`), elkészíti a production buildet, elindítja az alkalmazást a 3100-as porton, és mindkét nyelven lefuttatja az `e2e/` mappa tesztjeit (`AI_INSIGHTS_MODE=mock` módban, valódi Gemini-hívás nélkül). Minden teszt előtt az adatbázis visszaáll a demóállapotra, a tesztek valódi bejelentkezéssel futnak, a fejlesztői `dev.db` pedig érintetlen marad.

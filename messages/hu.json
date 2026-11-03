@@ -156,9 +156,11 @@
   },
   "insights": {
     "title": "AI elemzés",
-    "subtitle": "Összesített, fiktív válaszok szimulált összefoglalója",
+    "subtitle": "Az összesített szavazatszámok összefoglalója, a Google Gemini generálta",
     "loading": "AI elemzés készítése...",
-    "empty": "Még nincsenek összesített válaszok, így a szimulált elemzésnek nincs mit összefoglalnia. Az elemzés a szavazatok beérkezése után jelenik meg.",
+    "error": "Nem sikerült elkészíteni az elemzést. Kérjük, próbáld újra később.",
+    "retry": "Újrapróbálás",
+    "empty": "Még nem érkezett szavazat, így nincs mit összefoglalni. Az elemzés az első szavazatok után jelenik meg.",
     "quoted": "„{text}”",
     "tie": "Összesen {count, plural, other {# összesített válasz}} alapján a szimulált konszenzus egyenlően oszlik meg a következők között: {leaders}, mindegyik a szavazatok {share}%-ával. Az eloszlás alapján még nincs egyértelmű favorit, így néhány további válasz eldöntheti az eredményt.",
     "lead": "Összesen {count, plural, other {# összesített válasz}} alapján a szimulált konszenzus {strength, select, strong {erőteljesen} clear {egyértelműen} other {enyhén}} ezt az opciót részesíti előnyben: {leader}, a szavazatok {share}%-ával.",

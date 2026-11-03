@@ -657,3 +657,94 @@ Constraint: This is a massive architectural shift. Work methodically. Fix any E2
 - **E2E:** the tests use a separate `e2e.db`, recreated by the web server command with `prisma db push`. The DB is reset to the seed before every test (one worker), and users sign in through the NextAuth API. localStorage assertions became Prisma queries. New tests cover the auth flows, registration validation, a duplicate vote from a stale tab, and a vote after the poll closed.
 - **Results:** tsc, ESLint and `next build` are clean; 82/82 E2E tests pass in both locales. A second run showed one intermittent failure: a test submitted the register form before hydration, which triggered a native GET submit (password in the URL). Fixed in the app: the auth forms use `method="post"` and keep the submit button disabled until hydration. The full suite then passed 82/82 again.
 - **Docs and commit:** README (Hungarian) updated with the new architecture, the `.env` setup, `npx prisma db push`/`db seed` and the demo accounts. Committed together with the pending Prompt 13 theme-script fix and pushed to main.
+
+### Prompt 18
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+Role: Senior Full-Stack AI Engineer
+Task: Replace the simulated AI summary with a real Google Gemini API integration.
+
+Context:
+We are upgrading our "AI Insights" feature from a simulated timeout to a real LLM integration using the official Gemini API. The GEMINI_API_KEY is ALREADY set in the .env / .env.local file. The API call must happen securely on the server side via Next.js Server Actions so the key is never exposed to the client.
+
+Execution Steps:
+
+Install Dependencies:
+
+Install the official Google Gen AI SDK: npm install @google/genai
+
+Server Action & Prompting:
+
+Create a secure Server Action (e.g., actions/insights.ts).
+
+Initialize the client: import { GoogleGenAI } from '@google/genai'; const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+Create a function that accepts pollQuestion, aggregatedResults, and locale (en/hu) as parameters.
+
+Construct a prompt using the gemini-2.5-flash model. Example instruction: "You are an AI analyzing poll results. The question is: '{pollQuestion}'. The aggregated vote counts are: {results}. Provide a concise, professional summary and insight of these results in {locale} language. Do not use markdown headers, just a short paragraph."
+
+Call ai.models.generateContent(...) and return the generated text.
+
+Refactor AIInsights Component:
+
+Update the UI component to call this new Server Action instead of using the local setTimeout simulation.
+
+Maintain the loading state (skeleton or spinner) while waiting for the Gemini API response.
+
+Handle error states gracefully (e.g., show a "Failed to generate insights" message if the API fails).
+
+Fix & Verify E2E Tests (CRITICAL):
+
+Playwright tests should not spam the real paid/quota-limited API. Implement a bypass: if running in a test environment (e.g., if a specific test flag is set or handled via Playwright mocks), the Server Action or the test mock should return a static fallback string instead of calling Gemini.
+
+Run the Playwright suite and ensure all 20+ E2E tests still pass perfectly.
+
+Git Operations:
+
+Update README.md to mention the real Gemini API integration.
+
+Commit the changes autonomously: feat: integrate real Google Gemini API for dynamic AI insights via Server Actions.
+
+Push to main.
+
+Constraint: The API call must be strictly server-side. Ensure E2E tests remain 100% green by elegantly mocking or bypassing the real API call during automated test runs.
+```
+
+**Outcome:** Replaced the simulated AI summary with a real Google Gemini integration (`@google/genai` 2.32).
+- **Server side:** `src/lib/gemini.ts` (server-only) holds `summarizePollResults({ pollQuestion, aggregatedResults, locale })` with the requested prompt, a system instruction that treats poll texts as data, and markdown stripping. It is called through the `generatePollInsights(pollId, locale)` Server Action in `src/actions/insights.ts`.
+- **Deliberate deviation:** the action takes only the poll id and reads the question and counts from the database after checking the session, so the endpoint can't be used to send arbitrary prompts with the key. Polls without votes skip the API call.
+- **Results are cached** per poll, locale and vote counts.
+- **Model:** `gemini-2.5-flash` returns 404 for this (new) API key, so the default is `gemini-3.8-flash` with a fallback to `gemini-3.5-flash`. Each model gets one quick retry and a 12 s timeout; `GEMINI_MODEL` pins a single model.
+- **Live check:** the key worked, but `gemini-3.8-flash` returned 503/504 (high demand at the time), and `gemini-3.5-flash` answered in good Hungarian and English in about 30–40 s.
+- **UI:** `AIInsights` calls the action and keeps the skeleton loading state. It adds an error message with a Try again button, and EN/HU strings for both.
+- **Tests:** the Playwright server runs with `AI_INSIGHTS_MODE=mock` and an empty `GEMINI_API_KEY`, so the action returns the deterministic rule-based summary and never calls Gemini. The old two-second timer test became two tests that use `page.route` on the Server Action request: one holds it to check the loading state, the other fails it with a 500 to check the error and retry.
+- **Results:** 84/84 E2E tests passed; tsc and ESLint are clean.
+- **Other:** README (Hungarian) got a new "AI Insights (Google Gemini)" section, and `.env.example` documents the new variables. npm blocked the optional `protobufjs` postinstall script; it was left unapproved. Committed and pushed in Prompt 20.
+
+### Prompt 19
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+please add technical configuration ai usage test and everything into hungarian doc DEMO_forgatokonyv
+```
+
+**Outcome:** Rewrote `DEMO_FORGATOKONYV.md` (Hungarian) for the current full-stack app.
+- **Covers:** the tech stack table; installation; a table of every `.env` variable (including `GEMINI_API_KEY`, `GEMINI_MODEL` and `AI_INSIGHTS_MODE`); `npx prisma db push`, the seed and `npm run db:reset`; and the demo accounts.
+- **Demo setup:** two browser windows, manager in a normal one and participant in an incognito one, plus warming up the Gemini cache before the demo.
+- **New sections:** login and registration, a step-by-step explanation of the real Gemini flow (server-side key, aggregated data only, prompt-injection guard, cache, model fallback, loading and error states), and closing a poll while the participant's form is still open to show the server rejecting the vote.
+- **Tests section:** how to run them, the separate `e2e.db`, mock mode with no API calls, a coverage table, and an optional live run with a visible browser.
+- **Also updated:** the troubleshooting table and the practice checklist.
+- The test run was stopped by the user, so it was done in Prompt 20.
+
+### Prompt 20
+
+**Model:** Claude Opus 5.5 (`claude-opus-5-5`)
+
+```
+please push it and make it done
+```
+
+**Outcome:** Added the Gemini section to the README, then ran the full E2E suite: 84/84 passed (exit code 0), with tsc and ESLint clean. Before committing, `DEMO_FORGATOKONYV.md` had been changed back to its old version on disk, most likely by an editor that still had the old file open. After asking the user, the updated script was restored. Logged Prompts 18–20, committed everything with the message "feat: integrate real Google Gemini API for dynamic AI insights via Server Actions" and pushed to main.

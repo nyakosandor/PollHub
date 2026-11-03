@@ -29,9 +29,9 @@ function describeConsensus(marginPoints: number): ConsensusStrength {
 }
 
 /**
- * Builds a simulated "AI" analysis in the active locale. It reads only
- * aggregated vote counts, never individual votes, as the spec requires of the
- * LLM summary.
+ * Builds a rule-based summary in the active locale from aggregated vote
+ * counts only. It is shown instead of the Gemini text when there are no votes
+ * yet, and in mock mode (AI_INSIGHTS_MODE="mock"), which the E2E tests use.
  */
 export function buildInsightSummary(
   results: PollResult[],

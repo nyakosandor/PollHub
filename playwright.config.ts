@@ -38,6 +38,11 @@ export default defineConfig<TestOptions>({
       DATABASE_URL: E2E_DATABASE_URL,
       NEXTAUTH_URL: BASE_URL,
       NEXTAUTH_SECRET: "e2e-only-secret-not-for-production",
+      // No real Gemini calls from tests: the rule-based summary is returned
+      // instead, and an empty key makes any missed call fail instead of
+      // spending quota.
+      AI_INSIGHTS_MODE: "mock",
+      GEMINI_API_KEY: "",
     },
     // The login page renders without a session, so it signals readiness.
     url: `${BASE_URL}/hu/login`,

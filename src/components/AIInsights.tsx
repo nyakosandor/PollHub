@@ -1,29 +1,53 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useFormatter, useTranslations } from "next-intl";
-import { PollResult } from "@/types";
-import { buildInsightSummary } from "@/lib/insights";
-import { useTimeout } from "@/lib/useTimeout";
-import { Sparkles } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { AlertCircle, RotateCw, Sparkles } from "lucide-react";
+import { generatePollInsights } from "@/actions/insights";
 
-const SIMULATED_LATENCY_MS = 2000;
 const SKELETON_LINE_WIDTHS = ["w-full", "w-11/12", "w-3/5"];
 
+type InsightsState =
+  | { status: "loading" }
+  | { status: "done"; text: string }
+  | { status: "error" };
+
 interface AIInsightsProps {
-  results: PollResult[];
-  totalVotes: number;
+  pollId: string;
 }
 
-export default function AIInsights({ results, totalVotes }: AIInsightsProps) {
+/**
+ * Shows Gemini's summary of the poll results. The model is called by a Server
+ * Action, so the API key stays on the server. The parent remounts this
+ * component on every new vote, which requests a fresh summary.
+ */
+export default function AIInsights({ pollId }: AIInsightsProps) {
   const t = useTranslations("insights");
-  const format = useFormatter();
-  const [isLoading, setIsLoading] = useState(true);
-  const scheduleTimeout = useTimeout();
+  const locale = useLocale();
+  const [state, setState] = useState<InsightsState>({ status: "loading" });
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    scheduleTimeout(() => setIsLoading(false), SIMULATED_LATENCY_MS);
-  }, [scheduleTimeout]);
+    // Ignores a response that arrives after the locale changed or the
+    // component unmounted.
+    let isCurrent = true;
+    generatePollInsights(pollId, locale)
+      .then((result) => {
+        if (!isCurrent) return;
+        setState(result.ok ? { status: "done", text: result.text } : { status: "error" });
+      })
+      .catch(() => {
+        if (isCurrent) setState({ status: "error" });
+      });
+    return () => {
+      isCurrent = false;
+    };
+  }, [pollId, locale, attempt]);
+
+  const retry = () => {
+    setState({ status: "loading" });
+    setAttempt((count) => count + 1);
+  };
 
   return (
     <section
@@ -46,8 +70,8 @@ export default function AIInsights({ results, totalVotes }: AIInsightsProps) {
         </div>
       </div>
 
-      <div aria-live="polite" className="relative">
-        {isLoading ? (
+      <div aria-live="polite" aria-busy={state.status === "loading"} className="relative">
+        {state.status === "loading" && (
           <div data-testid="ai-insights-loading" className="flex flex-col gap-3">
             <p className="text-sm font-medium text-primary-700 dark:text-primary-300">
               {t("loading")}
@@ -64,16 +88,36 @@ export default function AIInsights({ results, totalVotes }: AIInsightsProps) {
               ))}
             </div>
           </div>
-        ) : (
+        )}
+
+        {state.status === "done" && (
           <p
             data-testid="ai-insights-summary"
             className="text-[15px] leading-relaxed text-slate-700 transition-opacity duration-500 starting:opacity-0 dark:text-slate-300"
           >
-            {buildInsightSummary(results, totalVotes, {
-              t,
-              formatList: (items) => format.list(items, { type: "conjunction" }),
-            })}
+            {state.text}
           </p>
+        )}
+
+        {state.status === "error" && (
+          <div
+            data-testid="ai-insights-error"
+            className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <p role="alert" className="flex items-center gap-2 text-sm font-medium text-red-700 dark:text-red-300">
+              <AlertCircle aria-hidden="true" className="h-4 w-4 shrink-0" />
+              {t("error")}
+            </p>
+            <button
+              type="button"
+              onClick={retry}
+              data-testid="ai-insights-retry"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-primary-700 ring-1 ring-primary-600/20 transition-colors duration-200 ring-inset hover:bg-primary-50 dark:text-primary-300 dark:ring-primary-400/30 dark:hover:bg-primary-500/10"
+            >
+              <RotateCw aria-hidden="true" className="h-3.5 w-3.5" />
+              {t("retry")}
+            </button>
+          </div>
         )}
       </div>
     </section>

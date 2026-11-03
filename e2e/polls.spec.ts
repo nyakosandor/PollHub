@@ -1,4 +1,4 @@
-import { Page } from "@playwright/test";
+import { Page, Route } from "@playwright/test";
 import { db } from "./db";
 import { expect, test, translatorFor, Translate } from "./fixtures";
 import { DEMO_USERS } from "../prisma/seed-data";
@@ -34,6 +34,20 @@ type Kpi = "total-votes" | "leading-option" | "time-remaining";
 const kpiCard = (page: Page, kpi: Kpi) => page.getByTestId(`kpi-${kpi}`);
 
 const insightsSummary = (page: Page) => page.getByTestId("ai-insights-summary");
+
+/**
+ * Intercepts Server Action calls (POSTs with a Next-Action header). On a poll
+ * page without user input, the only one is the AI insights request.
+ */
+const interceptServerActions = (page: Page, handle: (route: Route) => Promise<void>) =>
+  page.route("**/*", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST" && (await request.headerValue("next-action"))) {
+      await handle(route);
+    } else {
+      await route.fallback();
+    }
+  });
 
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -161,10 +175,7 @@ test.describe("participant", () => {
     await expect(kpiCard(page, "total-votes")).toContainText("1");
     await expect(kpiCard(page, "leading-option")).toContainText("Mobile app");
 
-    // A new vote runs the simulated analysis again, on the new totals.
-    await expect(page.getByTestId("ai-insights-loading")).toHaveText(
-      t("insights.loading")
-    );
+    // A new vote requests a new summary, for the new totals.
     await expect(insightsSummary(page)).toContainText(
       t("insights.lead", {
         count: 1,
@@ -536,23 +547,27 @@ test.describe("results view", () => {
     await expect(rows.nth(4)).toHaveText(/Unsatisfied\s*0\s*0%/);
   });
 
-  test("AI insights load for exactly two seconds, then show the analysis", async ({
+  test("AI insights show a loading state until the server answers", async ({
     page,
     t,
     localePath,
   }) => {
-    await page.clock.install();
-    await page.clock.pauseAt(Date.now() + 1000);
+    // Hold the insights Server Action request until the loading state is checked.
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => (release = resolve));
+    await interceptServerActions(page, async (route) => {
+      await released;
+      await route.continue();
+    });
     await page.goto(localePath(`/polls/${CLOSED_POLL.id}`));
 
     const loading = page.getByTestId("ai-insights-loading");
     await expect(loading).toHaveText(t("insights.loading"));
+    await expect(insightsSummary(page)).toHaveCount(0);
 
-    await page.clock.runFor(1999);
-    await expect(loading).toBeVisible();
-
-    await page.clock.runFor(1);
+    release();
     await expect(loading).toBeHidden();
+    // In mock mode the server answers with the rule-based summary.
     await expect(insightsSummary(page)).toHaveText(
       [
         t("insights.lead", {
@@ -571,6 +586,27 @@ test.describe("results view", () => {
     );
   });
 
+  test("AI insights report a failure and can be retried", async ({
+    page,
+    t,
+    localePath,
+  }) => {
+    // The first request fails as if the API were down; the retry goes through.
+    let failures = 0;
+    await interceptServerActions(page, async (route) => {
+      if (failures++ === 0) await route.fulfill({ status: 500, body: "Gemini unavailable" });
+      else await route.continue();
+    });
+    await page.goto(localePath(`/polls/${CLOSED_POLL.id}`));
+
+    const error = page.getByTestId("ai-insights-error");
+    await expect(error).toContainText(t("insights.error"));
+    await expect(insightsSummary(page)).toHaveCount(0);
+
+    await page.getByTestId("ai-insights-retry").click();
+    await expect(error).toBeHidden();
+    await expect(insightsSummary(page)).toContainText(t("insights.quoted", { text: "Very satisfied" }));
+  });
   test("fits a mobile screen without sideways scrolling", async ({
     page,
     localePath,

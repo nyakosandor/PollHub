@@ -1,7 +1,7 @@
 # PollHub – Élő demó forgatókönyv
 
-> **Cél:** a PollHub minden fő funkciójának, üzleti szabályának és UI-részletének hibátlan bemutatása a bírálóknak.
-> **Időtartam:** kb. **8–10 perc**
+> **Cél:** a PollHub minden fő funkciójának, üzleti szabályának, technikai megoldásának és tesztjének hibátlan bemutatása a bírálóknak.
+> **Időtartam:** kb. **12–15 perc** (az opcionális részek nélkül kb. 10 perc)
 > **Jelölések:**
 > - **Félkövér** = amire kattintani kell / amit be kell gépelni
 > - *Dőlt* = amit mondani kell (előadói szöveg)
@@ -10,193 +10,261 @@
 
 ---
 
-## 0. Előkészületek (a bemutató előtt, ~5 perc)
+## 0. Technikai konfiguráció és előkészületek (a bemutató előtt, ~10 perc)
 
-### 0.1 Szerver indítása
+### 0.1 A technológiai stack (ezt érdemes egy mondatban elmondani)
+
+| Réteg | Technológia | Szerep |
+| --- | --- | --- |
+| Keretrendszer | **Next.js 16** (App Router), React 19, TypeScript | Szerveroldali renderelés, Server Actions |
+| Adatbázis | **Prisma 7 + SQLite** (`dev.db`) | Relációs adatmodell: `User`, `Poll`, `Question`, `Option`, `Vote` |
+| Hitelesítés | **NextAuth 4** (Credentials provider) + **bcrypt** | Regisztráció, bejelentkezés, JWT-munkamenet szerepkörrel |
+| AI | **Google Gemini API** (`@google/genai`) | Valódi LLM-összefoglaló az összesített eredményekből |
+| Felület | Tailwind CSS 4, Recharts, lucide ikonok | Reszponzív UI, világos/sötét téma, diagram |
+| Nyelvek | **next-intl** | Magyar és angol felület, `/hu/...` és `/en/...` útvonalak |
+| Tesztek | **Playwright** | 84 end-to-end teszt (42 × 2 nyelv) valódi adatbázison |
+
+### 0.2 Telepítés (egyszer kell megcsinálni)
 
 - [ ] Nyiss egy terminált a projekt gyökérkönyvtárában (`PollHub`).
-- [ ] Ha még nem történt meg: **`npm install`**
-- [ ] Indítsd el a fejlesztői szervert: **`npm run dev`**
-- [ ] Várd meg a `✓ Ready` üzenetet → az alkalmazás a `http://localhost:3000` címen fut.
+- [ ] Függőségek: **`npm install`**
+  - A `postinstall` lépés automatikusan legenerálja a Prisma Clientet (`src/generated/prisma`).
+- [ ] Környezeti változók: másold le a mintát: **`copy .env.example .env`** (Windows) vagy **`cp .env.example .env`** (macOS/Linux).
+- [ ] Töltsd ki a `.env` fájlt:
 
-> ⚠️ **Ha a terminál azt írja: „Another next dev server is already running”** – egy korábbi szerver még fut. Használd azt (ugyanaz a cím), vagy állítsd le a kiírt `taskkill /PID … /F` paranccsal, és indítsd újra.
+| Változó | Jelentés | Demóhoz |
+| --- | --- | --- |
+| `DATABASE_URL` | Az SQLite-fájl helye | `"file:./dev.db"` (maradhat) |
+| `NEXTAUTH_SECRET` | A munkamenet-tokenek aláíró kulcsa | Véletlen érték, a parancs a `.env.example`-ben |
+| `NEXTAUTH_URL` | Az alkalmazás címe | `"http://localhost:3000"` |
+| `SHOW_DEMO_ACCOUNTS` | A bejelentkezési oldal kiírja a demófiókokat | `"true"` |
+| `GEMINI_API_KEY` | Google Gemini API-kulcs (<https://aistudio.google.com/apikey>) | **kötelező** a valódi AI-hoz |
+| `GEMINI_MODEL` | *(opcionális)* egyetlen modell rögzítése | üresen hagyva: `gemini-3.8-flash`, majd `gemini-3.5-flash` |
+| `AI_INSIGHTS_MODE` | *(opcionális)* `"mock"` = nincs Gemini-hívás, szabályalapú szöveg | csak internet nélküli demóhoz |
 
-> 💡 **Tipp a legsimább demóhoz:** a fejlesztői mód bal alsó sarkában megjelenik a Next.js „N” ikonja. Ha ezt el szeretnéd kerülni, használd az éles buildet: **`npm run build`**, majd **`npm start`** (szintén `http://localhost:3000`).
+> 🔒 **A `.env` soha nem kerül Gitbe** (a `.gitignore` kizárja). A Gemini-kulcs csak a szerveren él, a böngészőbe nem jut el.
 
-### 0.2 Böngésző előkészítése
+- [ ] Adatbázis létrehozása a séma alapján: **`npx prisma db push`** → létrejön a `dev.db`.
+- [ ] Demóadatok betöltése: **`npx prisma db seed`**
+  - Két felhasználó, négy „háttérszavazó”, két mintaszavazás és négy szavazat jön létre.
 
-- [ ] Nyisd meg **közvetlenül** a magyar nyelvű címet: **`http://localhost:3000/hu`**
-  - (A gyökér `/` cím a böngésző nyelve vagy a legutóbb választott nyelv alapján irányít át – ezért érdemes a `/hu`-val indulni.)
-- [ ] **Demóadatok visszaállítása** (tiszta kiinduló állapot):
-  1. **F12** → **Console** fül
-  2. Gépeld be: **`localStorage.clear()`** → **Enter**
-  3. **F5** (újratöltés)
-- [ ] Ellenőrizd a kiinduló állapotot:
-  - Szerepkör: **`Résztvevő`** aktív
-  - Két mintaszavazás látható: **`Next quarter priorities`** (`Nyitott`) és **`Onboarding feedback`** (`Lezárva`)
-- [ ] Állítsd a böngésző nagyítását **100%**-ra, és zárd be a felesleges lapokat / értesítéseket.
-- [ ] Zárd be a DevToolst (F12), hacsak nem a reszponzív nézetet mutatod (4. fejezet).
+**Demófiókok:**
 
-> 💡 **Fontos tudnivaló:** az adatok a böngésző **localStorage**-ában élnek. Teljes oldal-újratöltés után a lista egy pillanatra csak a két mintaszavazást mutatja, majd **megjelennek a saját szavazások is**. Újratöltés után várj egy másodpercet, mielőtt kattintasz – az alkalmazáson belüli navigációnál ez nem fordul elő.
+| Szerepkör | E-mail | Jelszó |
+| --- | --- | --- |
+| Menedzser | `manager@pollhub.local` | `Manager123!` |
+| Résztvevő | `participant@pollhub.local` | `Participant123!` |
+
+### 0.3 Közvetlenül a bemutató előtt
+
+- [ ] **Tiszta kiinduló állapot:** állítsd le a szervert (**Ctrl+C**), majd: **`npm run db:reset`**
+  - Törli a `dev.db`-t, újra létrehozza (`db push`) és feltölti (`db seed`).
+  - ⚠️ Futó szerver mellett Windowson a `dev.db` zárolva lehet, ezért előbb állítsd le.
+  - A reset után a korábbi bejelentkezések érvénytelenek, újra be kell lépni.
+- [ ] Szerver indítása: **`npm run dev`** → várd meg a `✓ Ready` üzenetet → `http://localhost:3000`.
+  - A `.env` módosítása után a szervert **mindig újra kell indítani**.
+  - 💡 Simább demóhoz (Next.js „N” ikon és fejlesztői hibaablak nélkül): **`npm run build`**, majd **`npm start`**.
+- [ ] **Két böngészőablak** (a munkamenet sütiben él, így két külön felhasználó lehet egyszerre bejelentkezve):
+  - **A ablak (normál):** ide lép be a **Menedzser**.
+  - **B ablak (inkognitó, Ctrl+Shift+N):** ide lép be a **Résztvevő**.
+  - Mindkettőben nyisd meg: **`http://localhost:3000/hu`**
+- [ ] **AI előmelegítése:** a B ablakban jelentkezz be résztvevőként, nyisd meg az **`Onboarding feedback`** szavazást, és várd meg az AI elemzést. Utána **jelentkezz ki**.
+  - A szerver gyorsítótárazza az összefoglalót (szavazás + nyelv + szavazatszámok szerint), így a bemutatón ez azonnal megjelenik.
+  - Ha a magyar mellett az angolt is mutatod, váltsd át egyszer az `EN` nyelvre is.
+- [ ] Böngésző nagyítása **100%**, felesleges lapok és értesítések bezárva.
 
 ---
 
-## 1. Kezdőképernyő és kétnyelvűség (UI & i18n) – ~1,5 perc
+## 1. Hitelesítés: védett oldalak, regisztráció, bejelentkezés – ~2 perc
 
-- [ ] **Mutasd be a kezdőoldalt** (`/hu` – `Szavazások`).
-  - *„Ez a PollHub kezdőoldala. A szavazások kártyákon jelennek meg: látható a státusz – `Nyitott` vagy `Lezárva` –, a cím, a szavazatok és az opciók száma.”*
-  - Vidd az egeret egy kártya fölé.
-  - *„A kártyák finoman megemelkednek, az árnyék erősödik – ezek a mikrointerakciók jelzik, hogy az elem kattintható.”*
+- [ ] **A ablak:** nyisd meg a **`http://localhost:3000/hu`** címet bejelentkezés nélkül.
+  - Az alkalmazás átirányít: **`/hu/login?callbackUrl=%2Fhu`** – cím: **`Üdv újra!`**
+  - *„Minden szavazási oldal bejelentkezést igényel. Az átirányítást egy proxy végzi még az oldal renderelése előtt; az oldalak és a Server Actionök ezen felül a szerveren, az adatbázisból is ellenőrzik a felhasználót.”*
 
-- [ ] **Mutasd meg a navigációs sávot** (jobb felső sarok).
-  - *„Itt három kapcsoló található: a szerepkör (`Résztvevő` / `Menedzser`), a nyelv (`HU` / `EN`) és a téma (rendszer / világos / sötét).”*
+- [ ] **Hibás jelszó:** írd be a `manager@pollhub.local` címet és egy rossz jelszót → **`Bejelentkezés`**.
+  - Hibaüzenet: **`Hibás e-mail-cím vagy jelszó.`**
+  - *„Nem létező e-mail-címre ugyanez az üzenet jelenik meg, így nem lehet kifürkészni, kinek van fiókja. A jelszavakat bcrypt-hash formában tároljuk, sosem olvasható alakban.”*
+
+- [ ] **(Opcionális, 1 perc) Regisztráció:** kattints a **`Regisztrálj`** linkre → **`Fiók létrehozása`** oldal.
+  - Mutasd meg a **`Fiók típusa`** választót: **`Résztvevő`** / **`Menedzser`**.
+  - Próbáld ki: eltérő jelszavak → **`A két jelszó nem egyezik.`**; foglalt e-mail (`participant@pollhub.local`) → **`Ezzel az e-mail-címmel már létezik fiók.`**
+  - Sikeres regisztráció után az új felhasználó **azonnal be van jelentkezve**.
+  - *„A validáció a böngészőben azonnali visszajelzést ad, de a szerver ugyanazokkal a szabályokkal újra ellenőriz.”*
+  - Ezután **`Kijelentkezés`**, és vissza a bejelentkezéshez.
+
+- [ ] **Bejelentkezés menedzserként:** `manager@pollhub.local` / `Manager123!` → **`Bejelentkezés`**.
+  - A navigációs sávban: az **e-mail-cím**, a lila **`Menedzser`** jelvény és a **`Kijelentkezés`** gomb, valamint a **`Menedzser irányítópult`** link.
+  - *„A régi szerepkör-kapcsoló helyett most valódi fiókok vannak: a szerepkört a munkamenet hordozza, amit a szerver ír alá.”*
+
+- [ ] **B ablak:** jelentkezz be résztvevőként: `participant@pollhub.local` / `Participant123!`
+  - Kék **`Résztvevő`** jelvény; a `Menedzser irányítópult` link **nem** látszik.
+
+---
+
+## 2. Kezdőképernyő és kétnyelvűség (UI & i18n) – ~1 perc
+
+- [ ] **A ablak – kezdőoldal** (`/hu` – `Szavazások`).
+  - *„A szavazások kártyákon jelennek meg: státusz – `Nyitott` vagy `Lezárva` –, cím, szavazatok és opciók száma. Az adatok már az adatbázisból, szerveroldali rendereléssel érkeznek.”*
+  - Vidd az egeret egy kártya fölé: *„A kártyák finoman megemelkednek – ez jelzi, hogy kattinthatók.”*
 
 - [ ] **Nyelvváltás:** kattints az **`EN`** gombra.
-  - Figyeld meg: az URL `/hu` → **`/en`**, a cím `Szavazások` → **`Polls`**, a státuszok `Open` / `Closed`.
-  - *„A kétnyelvűséget a next-intl könyvtár adja. A nyelv az URL része, így minden oldal közvetlenül linkelhető egy adott nyelven, és a nyelvváltás ugyanazon az oldalon marad.”*
-  - *„A felület szövegei fordítódnak, a felhasználói tartalom – például a szavazások címe – értelemszerűen nem.”*
+  - URL: `/hu` → **`/en`**, cím: `Szavazások` → **`Polls`**, státuszok: `Open` / `Closed`.
+  - *„A nyelv az URL része, így minden oldal közvetlenül linkelhető egy adott nyelven. A felület szövegei fordítódnak, a felhasználói tartalom értelemszerűen nem.”*
+- [ ] Vissza a **`HU`** gombbal. *„A választást az alkalmazás megjegyzi.”*
 
-- [ ] Kattints vissza a **`HU`** gombra → URL ismét **`/hu`**.
-  - *„Az alkalmazás megjegyzi a választást: a következő látogatáskor is ezen a nyelven nyílik meg.”*
-
-- [ ] **(Opcionális, 15 mp) Téma:** kattints a **hold ikonra** (`Sötét téma`), majd vissza a **monitor ikonra** (`Rendszertéma`).
-  - *„Világos és sötét témát is támogatunk, mindkettőben ellenőrzött, akadálymentes kontraszttal. Alapból az operációs rendszer beállítását követi.”*
+- [ ] **(Opcionális, 15 mp) Téma:** **hold ikon** (`Sötét téma`), majd **monitor ikon** (`Rendszertéma`).
+  - *„Világos és sötét téma, ellenőrzött kontraszttal; alapból az operációs rendszert követi, és oldalbetöltéskor sem villan fel rossz színnel.”*
 
 ---
 
-## 2. Kérdőív létrehozása (Menedzser munkafolyamat) – ~2 perc
+## 3. Kérdőív létrehozása (Menedzser, A ablak) – ~2 perc
 
-- [ ] **Szerepkörváltás:** kattints a **`Menedzser`** gombra a navigációs sávban.
-  - Megjelenik egy új menüpont: **`Menedzser irányítópult`**.
-  - *„A szerepkör az MVP-ben egy kapcsoló – a valós hitelesítést a jövőbeli fejlesztések között tárgyalom.”*
+- [ ] Kattints a **`Menedzser irányítópult`** linkre → `/hu/manager`.
+  - *„Ezt az oldalt csak menedzser érheti el. Ha egy résztvevő begépeli a címet, a szerver a kezdőoldalra irányítja.”*
+  - *(Opcionális bizonyíték: a B ablakban írd be a `/hu/manager` címet → visszakerül a `/hu` oldalra.)*
 
-- [ ] Kattints a **`Menedzser irányítópult`** linkre → URL: `/hu/manager`.
-
-- [ ] **Validáció bemutatása:** kattints üres űrlappal a **`Szavazás létrehozása`** gombra.
-  - Piros hibaüzenet: **`Add meg a szavazás címét.`**
-  - *„Az űrlap lépésről lépésre validál: cím, kérdés, legalább két válaszlehetőség, és jövőbeli lezárási idő.”*
+- [ ] **Validáció:** kattints üres űrlappal a **`Szavazás létrehozása`** gombra → **`Add meg a szavazás címét.`**
+  - *„Az űrlap lépésről lépésre validál: cím, kérdés, legalább két válaszlehetőség, jövőbeli lezárási idő.”*
 
 - [ ] **Töltsd ki az űrlapot:**
-  - **`Cím`** mező: **`Csapatépítő időpontja`**
-  - **`Kérdés`** mező: **`Melyik napon legyen a csapatépítő?`**
-  - **`Válaszlehetőségek`**:
-    - **`1. opció`**: **`Péntek`**
-    - **`2. opció`**: **`Szombat`**
-    - Kattints az **`Opció hozzáadása`** gombra → **`3. opció`**: **`Vasárnap`**
-  - *„A válaszlehetőségek száma dinamikus; kettő fölött a kuka ikonnal törölhetők is.”*
+  - **`Cím`**: **`Csapatépítő időpontja`**
+  - **`Kérdés`**: **`Melyik napon legyen a csapatépítő?`**
+  - **`1. opció`**: **`Péntek`** · **`2. opció`**: **`Szombat`** · **`Opció hozzáadása`** → **`3. opció`**: **`Vasárnap`**
 
-- [ ] **Lezárási idő bemutatása:** mutass a **`Lezárási idő`** mezőre.
-  - *„A lezárási idő alapértelmezetten **7 nappal** a létrehozás után van, de tetszőlegesen módosítható. Múltbeli időpontot a rendszer nem fogad el.”*
-  - *(Opcionális, ha van idő)* Állíts be egy múltbeli dátumot → **`Szavazás létrehozása`** → hibaüzenet: **`A lezárási időnek a jövőben kell lennie.`** – majd állítsd vissza egy jövőbeli időpontra.
-  - *„Architekturálisan a lezárási idő egy könnyűsúlyú Value Object: a szavazás nyitott vagy lezárt állapota **ebből származik**, nincs külön tárolt státuszmező, így nem kerülhet ellentmondásos állapotba.”*
+- [ ] **Lezárási idő:** mutass a **`Lezárási idő`** mezőre.
+  - *„Alapértelmezetten 7 nappal a létrehozás után zárul, de módosítható; múltbeli időpontot a rendszer nem fogad el. A lezárási idő értékobjektum: a nyitott/lezárt állapot ebből számítódik, nincs külön tárolt státusz, így nem kerülhet ellentmondásba.”*
 
-- [ ] Kattints a **`Szavazás létrehozása`** gombra.
-  - Zöld visszajelzés: **`A szavazás sikeresen létrejött!`**, az űrlap kiürül.
-  - Az új szavazás **az `Összes szavazás` lista tetején** jelenik meg, `Nyitott` státusszal, `0 szavazat · 3 opció` adattal.
-  - *„A háttérben a Kérdőív és a Kérdés két külön entitásként jön létre – a domainmodell így felkészült a többkérdéses kérdőívekre.”*
+- [ ] **`Szavazás létrehozása`** → **`A szavazás sikeresen létrejött!`**
+  - Az új szavazás az **`Összes szavazás`** lista tetején: `Nyitott`, `0 szavazat · 3 opció`.
+  - *„A háttérben egy Server Action fut: menedzseri jogosultságot ellenőriz, újra validál, majd egyetlen beágyazott írással hozza létre a `Poll`, a `Question` és az `Option` rekordokat. A modell így a többkérdéses kérdőívekre is fel van készítve.”*
 
 ---
 
-## 3. Szavazás és üzleti szabályok (Résztvevő munkafolyamat) – ~2 perc
+## 4. Szavazás és üzleti szabályok (Résztvevő, B ablak) – ~2 perc
 
-- [ ] **Szerepkörváltás:** kattints a **`Résztvevő`** gombra.
-  - Az alkalmazás automatikusan a **kezdőoldalra** irányít.
-  - *„A menedzseri irányítópultot Résztvevő nem érheti el – a rendszer átirányít.”*
+- [ ] **B ablak:** frissítsd a kezdőoldalt (**F5**) → megjelenik a **`Csapatépítő időpontja`**.
+  - *„A menedzser által létrehozott szavazás azonnal látszik a másik felhasználónál is – közös adatbázisból dolgozunk, nem a böngésző tárolójából.”*
 
-- [ ] Kattints az új szavazás kártyájára: **`Csapatépítő időpontja`**.
-  - Megjelenik az **`Add le a szavazatod`** kártya a kérdéssel és a három opcióval.
-  - *„Figyeljék meg: a `Szavazat leadása` gomb **inaktív**, amíg nincs kiválasztott opció.”*
-
-- [ ] Válaszd ki a **`Szombat`** opciót.
-  - A kiválasztott opció kiemelt keretet és hátteret kap.
-
-- [ ] Kattints a **`Szavazat leadása`** gombra.
+- [ ] Nyisd meg a szavazást → **`Add le a szavazatod`** kártya.
+  - *„A `Szavazat leadása` gomb inaktív, amíg nincs kiválasztott opció.”*
+- [ ] Válaszd a **`Szombat`** opciót → **`Szavazat leadása`**.
   - Visszajelzés: **`Köszönjük a szavazatod! Már szavaztál — az eredményeket lent láthatod.`**
-  - Az eredmények azonnal frissülnek (KPI-kártyák, diagram), az AI-elemzés **újraindul**.
+  - A KPI-kártyák és a diagram frissülnek, az AI elemzés új összefoglalót kér.
 
-- [ ] ⭐ **KULCSPONT – „egy felhasználó = egy szavazat” szabály:**
-  - *„Próbáljunk meg újra szavazni.”* – mutasd meg, hogy **nincs mire kattintani**: a választógombok és a beküldő gomb **eltűntek**, helyettük csak a visszaigazolás látható.
-  - Nyomj **F5**-öt (újratöltés).
-  - Az üzenet ismét: **`Már szavaztál — az eredményeket lent láthatod.`**
-  - *„A szabályt nem csak a felület kényszeríti ki: az állapotkezelő réteg is elutasítja a második szavazatot, és a szavazat újratöltés után is megmarad. Ezt automatizált E2E teszt is ellenőrzi.”*
+- [ ] ⭐ **KULCSPONT – „egy felhasználó, kérdésenként egy szavazat”:**
+  - **F5** → ismét: **`Már szavaztál — az eredményeket lent láthatod.`**, választógombok nincsenek.
+  - *„A szabályt a szerver tartatja be: a `Vote` táblán egyedi index van a felhasználó és a kérdés párosán. Ha valaki egy régi, még nyitott lapról próbálna újra szavazni, a szerver elutasítja – ezt automatizált teszt is ellenőrzi, két böngészőlappal.”*
 
-- [ ] Kattints a **`Vissza a szavazásokhoz`** linkre.
-  - A kártyán megjelent a **`Szavaztál`** címke, és `1 szavazat · 3 opció`.
+- [ ] **`Vissza a szavazásokhoz`** → a kártyán: **`Szavaztál`** címke, `1 szavazat · 3 opció`.
 
 ---
 
-## 4. Vizualizáció és AI-szimuláció (Eredmények) – ~2,5 perc
+## 5. Eredmények és valódi AI (Google Gemini) – ~3 perc
 
-> 💡 Az eredmények a szavazás oldalán, a szavazókártya **alatt** találhatók. A gazdagabb diagramhoz használd a mintaszavazást, amelyben már 4 szavazat van.
+> 💡 A gazdagabb diagramhoz a mintaszavazást használd, amelyben 4 szavazat van. (Ezt előmelegítetted a 0.3 pontban.)
 
-- [ ] Kattints az **`Onboarding feedback`** kártyára (`Lezárva`).
+- [ ] **B ablak:** nyisd meg az **`Onboarding feedback`** szavazást (`Lezárva`).
 
-- [ ] ⭐ **AI-elemzés – időzítés:** **azonnal** görgess le az **`AI elemzés`** kártyához.
-  - 2 másodpercig: **`AI elemzés készítése...`** + pulzáló skeleton-sávok.
-  - *„Ez a betöltési animáció pontosan **2 másodpercig** tart – egy valódi nyelvi modell válaszidejét szimulálja.”*
-  - (Ha lekésted: válts nyelvet és vissza, vagy töltsd újra az oldalt – **F5** –, és újra lefut.)
-
-- [ ] **Olvasd fel a generált szöveget** (kb.):
-  - *„Összesen 4 összesített válasz alapján a szimulált konszenzus **egyértelműen** ezt az opciót részesíti előnyben: „Very satisfied”, a szavazatok 50%-ával. Az eloszlás alapján a fő alternatíva: „Satisfied” (25%), 25 százalékponttal lemaradva. Ilyen kevés válasz mellett ezt csak korai jelzésként érdemes kezelni.”*
-  - *„Ez nem előre megírt szöveg: a valós, **összesített** szavazatokból, szabályok alapján épül fel. A vezető és a második helyezett közti különbségből adódik az erősség – `erőteljesen`, `egyértelműen` vagy `enyhén` –, felismeri a holtversenyt és az egyhangú eredményt, kis mintánál pedig figyelmeztet. Külső API nincs, így nincs költség és nincs adatvédelmi kockázat.”*
-
-- [ ] **Nyelvi bizonyíték:** kattints az **`EN`** gombra.
-  - Az AI-elemzés újra „gondolkodik”, majd **angolul** jelenik meg: *„Based on the 4 aggregated responses, the simulated consensus clearly favors…”*
-  - *„Ugyanaz az elemzés, az aktív nyelven, helyes többes számmal és nyelvhelyes felsorolással.”*
-  - Kattints vissza a **`HU`** gombra.
-
-- [ ] **KPI-kártyák** (a diagram fölött):
+- [ ] **KPI-kártyák:**
   - **`Összes szavazat`**: `4` – `4 opció között`
   - **`Vezető opció`**: `Very satisfied` – `A szavazatok 50%-a`
-  - **`Hátralévő idő`**: `Lezárva` – `A szavazás véget ért` (nyitott szavazásnál: pl. `7 nap múlva zárul`)
-  - *„A KPI-kártyák egy pillantással összefoglalják a lényeget. Holtversenynél a vezető opció kártyája minden holtversenyben lévő opciót megnevez.”*
+  - **`Hátralévő idő`**: `Lezárva` – `A szavazás véget ért`
+  - *„Holtversenynél a vezető opció kártyája minden holtversenyben lévő opciót megnevez.”*
 
-- [ ] **Recharts oszlopdiagram** (`Eredmények` kártya):
-  - *„Az opciók szavazatszám szerint **rangsorolva** jelennek meg. A vezető opció kék kiemelést kap.”*
-  - *„A skálázás dinamikus: a leghosszabb sáv a vezető részaránya, így az 50% pontosan kétszer olyan hosszú, mint a 25%.”*
-  - Vidd az egeret a **`Very satisfied`** sávra → **tooltip**: `50%` · `Very satisfied` · `2 szavazat`.
+- [ ] **Recharts oszlopdiagram:** az opciók szavazatszám szerint rangsorolva, a vezető kék kiemeléssel.
+  - Vidd az egeret a **`Very satisfied`** sávra → tooltip: `50%` · `2 szavazat`.
+  - **`Megtekintés táblázatként`** → akadálymentes táblázat (`Opció / Szavazat / Arány`).
 
-- [ ] **Táblázatos nézet:** kattints a **`Megtekintés táblázatként`** feliratra.
-  - Megjelenik az `Opció / Szavazat / Arány` táblázat.
-  - *„Ugyanaz az adat akadálymentes táblázatként is elérhető – képernyőolvasóval is használható.”*
+- [ ] ⭐ **AI elemzés** (a diagram alatt, alcím: `Az összesített szavazatszámok összefoglalója, a Google Gemini generálta`):
+  - Olvass fel 1–2 mondatot a generált szövegből. *(A szöveg minden futtatásnál kissé más lehet – ez valódi nyelvi modell.)*
+  - *„Ez már nem szimuláció: a szöveget a Google Gemini nyelvi modell írja, valós időben.”*
+  - **Hogyan működik – ezt mondd el:**
+    1. *„A böngésző csak a szavazás azonosítóját és a nyelvet küldi el egy Server Actionnek.”*
+    2. *„A szerver ellenőrzi a bejelentkezést, majd **az adatbázisból** olvassa ki a kérdést és az összesített szavazatszámokat. Egyedi szavazatok és felhasználói adatok nem jutnak el a modellhez – csak az aggregátum.”*
+    3. *„A promptot a szerver állítja össze, a Gemini API-kulcs a szerveren marad, a böngészőbe sosem kerül. Mivel a böngésző nem küldhet saját szöveget, a végpontot nem lehet ingyenes chatbotként kihasználni.”*
+    4. *„A rendszerutasítás szerint a kérdés és az opciók szövege adat, nem utasítás – ez véd a promptba csempészett parancsok ellen.”*
+    5. *„A válasz gyorsítótárba kerül: azonos eredményekre nem fizetünk újra. Új szavazatnál új összefoglaló készül.”*
+    6. *„Ha egy modell túlterhelt vagy nem elérhető, a szerver röviden újrapróbálja, majd egy második Flash modellre vált.”*
 
-- [ ] **(Opcionális) Reszponzív nézet:**
-  - **F12** → **Ctrl+Shift+M** (eszköz mód) → válassz pl. **iPhone SE** (375 px).
-  - *„Mobilon a KPI-kártyák egymás alá kerülnek, a diagram a képernyőhöz igazodik, és nincs vízszintes görgetés. A navigációs sávban a szerepkör-kapcsoló ikonos formára vált.”*
-  - Zárd be a DevToolst (**F12**).
+- [ ] **Nyelvi bizonyíték:** kattints az **`EN`** gombra.
+  - Rövid **`Generating AI insights...`** állapot után az elemzés **angolul** jelenik meg.
+  - *„A nyelvet a szerver adja át a modellnek, így az összefoglaló mindig az aktív nyelven készül.”*
+  - Vissza a **`HU`** gombbal.
+
+- [ ] **Betöltési és hibaállapot (szóban, vagy ha épp előfordul):**
+  - Várakozás közben: **`AI elemzés készítése...`** + pulzáló skeleton.
+  - Ha az API nem válaszol: **`Nem sikerült elkészíteni az elemzést. Kérjük, próbáld újra később.`** + **`Újrapróbálás`** gomb.
+  - *„A hiba nem dönti össze az oldalt: a diagram és a KPI-k működnek tovább, az elemzés pedig egy kattintással újrakérhető.”*
+
+- [ ] **(Opcionális) Reszponzív nézet:** **F12** → **Ctrl+Shift+M** → **iPhone SE** (375 px).
+  - *„Mobilon a KPI-kártyák egymás alá kerülnek, a diagram igazodik, nincs vízszintes görgetés.”* → **F12**.
 
 ---
 
-## 5. Szavazás lezárása (lezárási szabály) – ~1,5 perc
+## 6. Szavazás lezárása (lezárási szabály, két ablakkal) – ~2 perc
 
-- [ ] Kattints a **`Vissza a szavazásokhoz`** linkre, majd nyisd meg a **`Csapatépítő időpontja`** szavazást.
-
-- [ ] **Szerepkörváltás:** kattints a **`Menedzser`** gombra (maradj ugyanezen az oldalon).
-  - A szavazókártya eltűnik, helyette megjelenik a **`Szavazás lezárása`** gomb.
-  - *„Menedzserként nem szavazunk, hanem kezeljük a szavazást.”*
-
-- [ ] Kattints a **`Szavazás lezárása`** gombra.
-  - A gomb felirata: **`Szavazás lezárva`**, és **inaktívvá** válik.
-  - A státusz: `Nyitott` → **`Lezárva`**; a `Hátralévő idő` KPI: **`Lezárva`** – `A szavazás véget ért`.
-  - *„A lezárás technikailag annyit jelent, hogy a lezárási idő a jelenlegi időpontra áll – ugyanaz a szabály érvényes rá, mint a lejáratra.”*
-
-- [ ] **Szerepkörváltás:** kattints a **`Résztvevő`** gombra (ugyanezen az oldalon).
-  - A szavazóűrlap helyén: **`Ez a szavazás lezárult. Szavazni már nem lehet.`**
-  - Nincsenek választógombok, nincs beküldő gomb – **az eredmények viszont továbbra is láthatók**.
-  - *„Lezárt szavazásra semmilyen módon nem lehet szavazni – ezt is az állapotkezelő réteg tartatja be, nem csak a felület.”*
+- [ ] **B ablak (Résztvevő):** nyisd meg a **`Next quarter priorities`** szavazást, és **jelölj be egy opciót, de még ne küldd be**.
+- [ ] **A ablak (Menedzser):** nyisd meg ugyanezt a szavazást → **`Szavazás lezárása`**.
+  - A gomb: **`Szavazás lezárva`** (inaktív); státusz: `Nyitott` → **`Lezárva`**; KPI: **`Lezárva`**.
+  - *„A lezárás a lezárási időt a jelenlegi pillanatra állítja – ugyanaz a szabály érvényes rá, mint a lejáratra. Menedzser nem szavaz, ezért nála nincs szavazóűrlap.”*
+- [ ] ⭐ **B ablak:** most kattints a **`Szavazat leadása`** gombra.
+  - Hibaüzenet: **`A szavazás lezárult, ezért a szavazatod nem került rögzítésre.`**
+  - *„A résztvevő lapja még nyitott űrlapot mutatott, de a szerver a beküldés pillanatában az adatbázisból ellenőrzi a lezárási időt, és elutasítja a szavazatot. A felület csak kényelmi funkció, a szabály a szerveren dől el.”*
+- [ ] **F5** a B ablakban → **`Ez a szavazás lezárult. Szavazni már nem lehet.`**, az eredmények továbbra is láthatók.
 
 - [ ] **(Alternatíva – automatikus lezárás, ha van 2–3 perc):**
-  - Menedzserként hozz létre egy szavazást, amelynek **`Lezárási idő`**-je **1–2 perccel** a jelenlegi időpont után van.
-  - Résztvevőként nyisd meg, és **ne kattints semmire**.
-  - A lezárási időpont elérésekor a státusz **magától** `Lezárva`-ra vált, a szavazóűrlap eltűnik – **újratöltés nélkül**.
-  - *„Az alkalmazás időzítővel figyeli a következő lezárási időpontot, így a nézet magától frissül.”*
+  - Menedzserként hozz létre egy szavazást **1–2 perccel** későbbi `Lezárási idő`-vel; résztvevőként nyisd meg, és ne kattints semmire.
+  - A lezárási időpontban a státusz **magától** `Lezárva`-ra vált, a szavazóűrlap eltűnik – **újratöltés nélkül**.
+  - *„A felület a következő lezárási időpontra időzít; a szerver renderelési idejéből indul, így betöltéskor sincs eltérés a szerver és a böngésző nézete között.”*
+
+- [ ] **Kijelentkezés:** **A ablak** → **`Kijelentkezés`** → visszakerülsz a bejelentkezési oldalra; a `/hu/manager` cím ismét a bejelentkezéshez irányít.
 
 ---
 
-## 6. Zárás (~30 mp)
+## 7. Automatizált tesztek (Playwright E2E) – ~1,5 perc
 
-- [ ] *„Összefoglalva: láttuk a teljes folyamatot – létrehozás, szavazás, eredmények, AI-elemzés és lezárás –, két nyelven, két szerepkörrel. Minden bemutatott üzleti szabályt automatizált Playwright E2E tesztek ellenőriznek, mindkét nyelven.”*
-- [ ] Térj vissza a prezentációhoz (`ELOADAS_VAZLAT.md`, 7. fejezet: korlátok és továbbfejlesztés).
+- [ ] *„Minden bemutatott szabályt és folyamatot automatizált end-to-end tesztek ellenőriznek, valódi böngészőben és valódi adatbázison.”*
+
+**Futtatás** (első alkalommal előtte: **`npx playwright install chromium`**):
+
+```bash
+npm run test:e2e
+```
+
+- [ ] Mondd el, mi történik:
+  - *„A tesztek **külön adatbázist** használnak (`e2e.db`): a parancs törli és a séma alapján újra létrehozza (`npx prisma db push`), így a fejlesztői `dev.db` érintetlen marad.”*
+  - *„Production buildet készít, és a 3100-as porton indítja el az alkalmazást.”*
+  - *„**Minden teszt előtt** az adatbázis visszaáll a demóállapotra, a teszt pedig valódi bejelentkezéssel indul (menedzserként vagy résztvevőként). Mivel a tesztek közös adatbázist használnak, egymás után futnak.”*
+  - *„A tesztek az eredményt az adatbázisban is ellenőrzik, például hogy a szavazat a bejelentkezett felhasználóhoz került, vagy hogy a jelszó bcrypt-hash.”*
+  - *„**Gemini-hívás nincs:** a tesztszerver `AI_INSIGHTS_MODE=mock` módban fut, ekkor a szerver determinisztikus, szabályalapú összefoglalót ad vissza, és a Gemini-kulcs üres. Így a tesztek nem fogyasztanak fizetős kvótát, és minden futásnál ugyanazt a szöveget várhatják. A betöltési és a hibaállapotot a teszt a hálózati kérés feltartásával, illetve 500-as hibára cserélésével vizsgálja.”*
+  - *„Az egész csomag **mindkét nyelven** lefut: 84 teszt (42 × magyar és angol), kb. 5 perc.”*
+
+- [ ] **Mit fednek le a tesztek** (ha kérdezik):
+
+| Terület | Példák |
+| --- | --- |
+| Hitelesítés | Átirányítás bejelentkezésre és vissza, hibás jelszó, regisztráció szerepkörrel, kijelentkezés, külső `callbackUrl` elutasítása |
+| Jogosultság | Résztvevő nem éri el a `/manager` oldalt, menedzser nem szavaz |
+| Üzleti szabályok | Egy szavazat kérdésenként (két lapról is), lezárt szavazásra nincs szavazat, lezárás = `closesAt` most |
+| Űrlapok | Kérdőív-validáció, alapértelmezett 7 napos lezárás, egyéni lezárási idő |
+| Eredmények | KPI-k, holtverseny, diagram arányai és színei, táblázat, mobilnézet |
+| AI elemzés | Betöltési állapot, hibaüzenet és újrapróbálás, üres eredmény |
+| Felület | Nyelvváltás és -megjegyzés, 404 oldal, téma villanás nélkül, nincs hidratálási hiba |
+
+- [ ] **(Opcionális, élő bemutató, ~1 perc):** csak a hitelesítési tesztek, látható böngészővel, magyarul:
+
+```bash
+npx playwright test e2e/auth.spec.ts --project=chromium-hu --headed
+```
+
+> ⚠️ A tesztek a 3100-as portot használják; ha ott már fut egy korábbi tesztszerver, azt újrahasznosítják. A fejlesztői szerver (3000) mellett nyugodtan futtathatók.
+
+---
+
+## 8. Zárás (~30 mp)
+
+- [ ] *„Összefoglalva: láttuk a teljes folyamatot – regisztráció és bejelentkezés, létrehozás, szavazás, eredmények, valódi AI-elemzés és lezárás –, két nyelven, két valódi szerepkörrel. Az adatok relációs adatbázisban vannak, a szabályokat a szerver tartatja be, az AI-kulcs a szerveren marad, és mindezt 84 automatizált teszt ellenőrzi, a fizetős API terhelése nélkül.”*
+- [ ] Térj vissza a prezentációhoz (`ELOADAS_VAZLAT.md`).
 
 ---
 
@@ -205,18 +273,27 @@
 | Probléma | Megoldás |
 |---|---|
 | Az oldal angolul nyílik meg | Kattints a **`HU`** gombra, vagy nyisd meg a **`/hu`** címet. |
-| Hiányzik a saját szavazás a listából | Teljes újratöltés után várj 1 másodpercet – a localStorage betöltése után megjelenik. |
-| A demó közben „elrontott” adatok | Console: **`localStorage.clear()`** → **F5** (a szerepkör is visszaáll `Résztvevő`-re). |
-| Nem látszik a `Menedzser irányítópult` link | Előbb kattints a **`Menedzser`** szerepkörre. |
-| Lekésted a 2 mp-es AI-betöltést | **F5** vagy nyelvváltás – az elemzés újra lefut. |
+| Minden oldal a bejelentkezéshez irányít | Ez a helyes működés kijelentkezve. Lépj be egy demófiókkal. |
+| `Hibás e-mail-cím vagy jelszó.` a demófiókkal | Az adatbázis nincs feltöltve: **Ctrl+C** → **`npm run db:reset`** → **`npm run dev`**. |
+| A demó közben „elrontott” adatok | Szerver leállítása → **`npm run db:reset`** → újraindítás → újra bejelentkezés. |
+| Nem látszik a `Menedzser irányítópult` link | Résztvevőként vagy bejelentkezve; jelentkezz be a menedzserfiókkal (A ablak). |
+| Mindkét ablakban ugyanaz a felhasználó | A B ablak legyen **inkognitó** (Ctrl+Shift+N) – a munkamenet sütiben él. |
+| Az AI elemzés sokáig tölt | A Gemini túlterhelt lehet (akár 30–40 mp). Közben mutasd a diagramot; vagy mutasd az előmelegített `Onboarding feedback` szavazást. |
+| `Nem sikerült elkészíteni az elemzést.` | Kattints az **`Újrapróbálás`** gombra. Ha tartósan fennáll: ellenőrizd a `GEMINI_API_KEY`-t a `.env`-ben, és indítsd újra a szervert. |
+| Nincs internet / nincs API-kulcs a helyszínen | `.env`: **`AI_INSIGHTS_MODE="mock"`** → szerver újraindítása. Ekkor szabályalapú összefoglaló jelenik meg (mondd el, hogy ez a tesztmód). |
+| A `.env` módosítása nem hat | A szervert újra kell indítani (**Ctrl+C** → **`npm run dev`**). |
+| `npm run db:reset` hibát ad (`EBUSY`) | A futó szerver zárolja a `dev.db`-t: előbb állítsd le. |
 | A szerver nem indul („Another next dev server…”) | Használd a már futó szervert, vagy állítsd le a kiírt `taskkill` paranccsal. |
-| Hibaüzenet-ablak (piros „Issue” jelzés) fejlesztői módban | Használd az éles buildet: `npm run build` → `npm start`. |
+| Piros „Issue” jelzés fejlesztői módban | Használd az éles buildet: `npm run build` → `npm start`. |
 
 ---
 
 ## Gyakorlási ellenőrzőlista
 
-- [ ] A teljes demó legalább **kétszer** végigment hiba nélkül
-- [ ] Időtartam **10 percen belül**
-- [ ] A demóadatok visszaállítása (`localStorage.clear()`) a bemutató előtt megtörtént
-- [ ] A ⭐ jelölt kulcspontok (egy szavazat szabálya, AI-időzítés) gördülékenyek
+- [ ] A `.env` ki van töltve (`NEXTAUTH_SECRET`, `GEMINI_API_KEY`), a szerver ezzel indult
+- [ ] `npm run db:reset` a bemutató előtt lefutott, mindkét demófiókkal sikerül a belépés
+- [ ] Két ablak kész: A = Menedzser (normál), B = Résztvevő (inkognitó)
+- [ ] Az AI elemzés előmelegítve (`Onboarding feedback`, HU és EN)
+- [ ] A teljes demó legalább **kétszer** végigment hiba nélkül, **15 percen belül**
+- [ ] A ⭐ kulcspontok gördülékenyek: egy szavazat szabálya, valódi AI magyarázata, lezárás nyitott űrlap mellett
+- [ ] `npm run test:e2e` egyszer lefutott a gépen (kb. 5 perc), az eredmény ismert
